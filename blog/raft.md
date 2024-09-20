@@ -11,7 +11,7 @@
 - ZAB算法（zookeeper）
 
 ### 复制状态机模型
-![alt text](image/image.png)
+![alt text](images/raft/image.png)
 整个工作流程可以归纳为如下几步：
 - 用户输入设置指令，比如将设置y为1，然后将y更改为9。  
 - 集群收到用户指令之后，会将该指令同步到集群中的多台服务器上，这里你可以认为所有的变更操作都会写入到每个服务器的Log文件中。
@@ -50,7 +50,7 @@ Raft 是一个非拜占庭的一致性算法，即所有通信是正确的而非
 2. 某一 Follower 结点与 Leader 间通信发生问题，导致发生了分区，这时没有 Leader 的那个分区就会进行一次选举。这种情况下，因为要求获得多数的投票才可以成为 Leader，因此只有拥有多数结点的分区可以正常工作。而对于少数结点的分区，即使仍存在 Leader，但由于写入日志的结点数量不可能超过半数因此不可能提交操作。这也是为何一开始我提到Raft算法必须要半数以上节点正常才能工作。
 ![alt text](https://imgs.lfeng.tech/images/2023/04/03bK8U.gif)
 #### 小总结
-![alt text](image/image-2.png)
+![alt text](images/raft/image-2.png)
 Leader：处理与客户端的交互和与 follower 的日志复制等，一般只有一个 Leader；
 Follower：被动学习 Leader 的日志同步，同时也会在 leader 超时后转变为 Candidate 参与竞选；
 Candidate：在竞选期间参与竞选；
@@ -59,7 +59,7 @@ Candidate：在竞选期间参与竞选；
 Raft算法将时间分为一个个的任期（term），每一个term的开始都是Leader选举。
 每一个任期以一次选举作为起点，所以当一个结点成为 Candidate 并向其他结点请求投票时，会将自己的 Term 加 1，表明新一轮的开始以及旧 Leader 的任期结束。所有结点在收到比自己更新的 Term 之后就会更新自己的 Term 并转成 Follower，而收到过时的消息则拒绝该请求。
 在成功选举Leader之后，Leader会在整个term内管理整个集群。如果Leader选举失败，该term就会因为没有Leader而结束。
-![alt text](image/image-3.png)
+![alt text](images/raft/image-3.png)
 
 #### 投票
 在投票时候，所有服务器采用先来先得的原则，在一个任期内只可以投票给一个结点，得到超过半数的投票才可成为 Leader，从而保证了一个任期内只会有一个 Leader 产生（Election Safety）。
@@ -67,7 +67,7 @@ Raft算法将时间分为一个个的任期（term），每一个term的开始�
 在 Raft 中日志只有从 Leader 到 Follower 这一流向，所以需要保证 Leader 的日志必须正确，即必须拥有所有已在多数节点上存在的日志，这一步骤由投票来限制。
 
 日志格式如下：
-![alt text](image/image-4.png)
+![alt text](images/raft/image-4.png)
 如上图所示，日志由有序编号（log index）的日志条目组成。每个日志条目包含它被创建时的任期号（term），和用于状态机执行的命令。如果一个日志条目被复制到大多数服务器上，就被认为可以提交（commit）了。
 
 由于只有日志在被多数结点复制之后才会被提交并返回，所以如果一个 Candidate 并不拥有最新的已被复制的日志，那么他不可能获得多数票，从而保证了 Leader 一定具有所有已被多数拥有的日志（Leader Completeness），在后续同步时会将其同步给所有结点。
@@ -76,7 +76,7 @@ Raft算法将时间分为一个个的任期（term），每一个term的开始�
 #### 工作流程
 Leader选出后，就开始接收客户端的请求。Leader把请求作为日志条目（Log entries）加入到它的日志中，然后并行的向其他服务器发起 AppendEntries RPC复制日志条目。当这条日志被复制到大多数服务器上，Leader将这条日志应用到它的状态机并向客户端返回执行结果。
 
-![alt text](image/image-7.png)
+![alt text](images/raft/image-7.png)
 某些Followers可能没有成功的复制日志，Leader会无限的重试 AppendEntries RPC直到所有的Followers最终存储了所有的日志条目。
 
 日志由有序编号（log index）的日志条目组成。每个日志条目包含它被创建时的任期号（term），和用于状态机执行的命令。如果一个日志条目被复制到大多数服务器上，就被认为可以提交（commit）了。
@@ -84,7 +84,7 @@ Leader选出后，就开始接收客户端的请求。Leader把请求作为日�
 #### 实际处理逻辑
 Leader 会给每个 Follower 发送该 RPC 以追加日志，请求中除了当前任期 term、Leader 的 id 和已提交的日志 index，还有将要追加的日志列表（空则成为心跳包），前一个日志的 index 和 term。
 
-![alt text](image/image-8.png)
+![alt text](images/raft/image-8.png)
 
 在接到该请求后，会进行如下判断：
 
@@ -119,7 +119,7 @@ Leader 会给每个 Follower 发送该 RPC 以追加日志，请求中除了当�
 
 #### 提交规则
 Raft额外限制了 **Leader只对自己任期内的日志条目适用该规则，先前任期的条目只能由当前任期的提交而间接被提交。** 也就是说，当前任期的Leader，不会去负责之前term的日志提交，之前term的日志提交，只会随着当前term的日志提交而间接提交。
-![alt text](image/image-5.png)
+![alt text](images/raft/image-5.png)
 
 - 初始状态如 (a) 所示，之后 S1 下线；
 - (b) 中 S5 从 S3 和 S4 处获得了投票成为了 Leader 并收到了一条来自客户端的消息，之后 S5 下线。
@@ -137,7 +137,7 @@ Raft额外限制了 **Leader只对自己任期内的日志条目适用该规则�
 
 ### 拓展
 #### 日志压缩
-![alt text](image/image-6.png)
+![alt text](images/raft/image-6.png)
 在实际的系统中，不能让日志无限增长，否则系统重启时需要花很长的时间进行回放，从而影响可用性。Raft采用对整个系统进行snapshot来解决，snapshot之前的日志都可以丢弃。
 
 每个副本独立的对自己的系统状态进行snapshot，并且只能对已经提交的日志记录进行snapshot。
