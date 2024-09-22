@@ -313,9 +313,259 @@ HashMap 里哈希构造函数的方法叫：
 
 
 ## 解决哈希冲突有哪些方法呢？
+解决哈希冲突的方法我知道的有 3 种：
+
+①、再哈希法
+
+准备两套哈希算法，当发生哈希冲突的时候，使用另外一种哈希算法，直到找到空槽为止。对哈希算法的设计要求比较高。
+
+②、开放地址法
+
+遇到哈希冲突的时候，就去寻找下一个空的槽。有 3 种方法：
+
+线性探测：从冲突的位置开始，依次往后找，直到找到空槽。
+二次探测：从冲突的位置 x 开始，第一次增加 $1^2$ 个位置，第二次增加 $2^2$，直到找到空槽。
+双重哈希：和再哈希法类似，准备多个哈希函数，发生冲突的时候，使用另外一个哈希函数。
+
+③、拉链法
+
+也就是所谓的链地址法，当发生哈希冲突的时候，使用链表将冲突的元素串起来。HashMap 采用的正是拉链法。
+
+## 怎么判断 key 相等呢？
+HashMap判断两个key是否相等，依赖于key的equals()方法和hashCode()方法，以及 == 运算符。
+
+```java
+if (e.hash == hash &&
+((k = e.key) == key || (key != null && key.equals(k))))
+```
+①、hashCode() ：首先，使用key的hashCode()方法计算key的哈希码。由于不同的key可能有相同的哈希码，hashCode()只是第一步筛选。
+
+②、equals() ：当两个key的哈希码相同时，HashMap还会调用key的equals()方法进行精确比较。只有当equals()方法返回true时，两个key才被认为是完全相同的。
+
+③、==：当然了，如果两个key的引用指向同一个对象，那么它们的hashCode()和equals()方法都会返回true，所以在 equals 判断之前会优先使用==运算符判断一次。
 
 
+## 为什么 HashMap 链表转红黑树的阈值为 8 呢？
+树化发生在 table 数组的长度大于 64，且链表的长度大于 8 的时候。
+
+红黑树节点的大小大概是普通节点大小的两倍，所以转红黑树，牺牲了空间换时间，更多的是一种兜底的策略，保证极端情况下的查找效率。
+
+阈值为什么要选 8 呢？和统计学有关。理想情况下，使用随机哈希码，链表里的节点符合泊松分布，出现节点个数的概率是递减的，节点个数为 8 的情况，发生概率仅为0.00000006。
+
+至于红黑树转回链表的阈值为什么是 6，而不是 8？是因为如果这个阈值也设置成 8，假如发生碰撞，节点增减刚好在 8 附近，会发生链表和红黑树的不断转换，导致资源浪费。
 
 
+## 扩容在什么时候呢？为什么扩容因子是 0.75？ 
+HashMap 会在存储的键值对数量超过阈值（即容量 * 加载因子）时进行扩容。  
 
+默认的加载因子是 0.75，这意味着当 HashMap 填满了大约 75%的容量时，就会进行扩容。
+
+简单来说，这是对空间成本和时间成本平衡的考虑。
+
+我们都知道，HashMap 的散列构造方式是 Hash 取余，负载因子决定元素个数达到多少时候扩容。
+
+假如我们设的比较大，元素比较多，空位比较少的时候才扩容，那么发生哈希冲突的概率就增加了，查找的时间成本就增加了。
+
+我们设的比较小的话，元素比较少，空位比较多的时候就扩容了，发生哈希碰撞的概率就降低了，查找时间成本降低，但是就需要更多的空间去存储元素，空间成本就增加了。
+
+## 扩容机制了解吗？
+扩容时，HashMap 会创建一个新的数组，其容量是原数组容量的两倍。然后将键值对放到新计算出的索引位置上。一部分索引不变，另一部分索引为“原索引+旧容量”。
+
+JDK 8 的新 hash 算法下，数组扩容后的索引位置，要么就是原来的索引位置，要么就是“原索引+原来的容量”，遵循一定的规律。
+
+这个功劳既属于新的哈希算法，也离不开 n 为 2 的整数次幂这个前提，这是它俩通力合作后的结果 hash & (newCapacity - 1)。
+
+### 那你说说扩容的时候每个节点都要进行位运算吗，如果我这个 HashMap 里面有几十万条数据，都要进行位运算吗？
+在 JDK 8 的新 hash 算法下，数组扩容后的索引位置，要么就是原来的索引位置，要么就是“原索引+原来的容量”，遵循一定的规律。
+
+具体来说，就是判断原哈希值的高位中新增的那一位是否为 1，如果是，该元素会被移动到原位置加上旧容量的位置；如果不是，则保持在原位置。
+
+所以，尽管有几十万条数据，每个数据项的位置决定仅需要一次简单的位运算。位运算的计算速度非常快，因此，尽管扩容操作涉及遍历整个哈希表并对每个节点进行操作，但这部分操作的计算成本是相对较低的。
+
+## JDK 8 对 HashMap 主要做了哪些优化呢？为什么？
+1. 底层数据结构由数组 + 链表改成了数组 + 链表或红黑树的结构。  
+如果多个键映射到了同一个哈希值，链表会变得很长，在最坏的情况下，当所有的键都映射到同一个桶中时，性能会退化到 O(n)，而红黑树的时间复杂度是 O(logn)
+2. 链表的插入方式由头插法改为了尾插法。   
+头插法虽然简单快捷，但扩容后容易改变原来链表的顺序。
+3. 扩容的时机由插入时判断改为插入后判断。
+原因：可以避免在每次插入时都进行不必要的扩容检查，因为有可能插入后仍然不需要扩容。
+4. 优化了哈希算法。
+
+
+## 你能自己设计实现一个 HashMap 吗？
+整体的设计：
+
+散列函数：hashCode()+除留取余法
+冲突解决：链地址法
+扩容：节点重新 hash 获取位置
+
+```java
+public class ThirdHashMap<K, V> {
+    // 节点类
+    class Node<K, V> {
+        private K key;
+        private V value;
+        private Node<K, V> next;
+        public Node(K key, V value) {
+            this.key = key;
+            this.value = value;
+        }
+        public Node(K key, V value, Node<K, V> next) {
+            this.key = key;
+            this.value = value;
+            this.next = next;
+        }
+    }
+
+    // 默认容量
+    final int DEFAULT_CAPACITY = 16;
+    // 负载因子
+    final float LOAD_FACTOR = 0.75f;
+    // HashMap的大小
+    private int size;
+    // 桶数组
+    Node<K, V> buckets;
+    
+    // 无参构造器
+    public ThirdHashMap() {
+        buckets = new Node[DEFAULT_CAPACITY];
+        size = 0;
+    }
+    // 有参构造器
+    public ThirdHashMap(int capacity) {
+        buckets = new Node[capacity];
+        size = 0;
+    }
+    // 哈希函数，获取地址
+    private int getIndex(K key, int length) {
+        int hashCode = key.hashCode();
+        int index = hashCode % length;
+        return Math.abs(index);
+    }
+    // put方法
+    public void put(K key, V value) {
+        if (size >= buckets.length * LOAD_FACTOR) resize();
+        putVal(key, value, buckets);
+    }
+    // 将元素存入指定的Node数组
+    private void putVal(K key, V value, Node<K, V>[] table) {
+        int index = getIndex(key, table.length);
+        Node node = table[index];
+        if (node == null) {
+            table[index] = new Node<>(key, value);
+            size++;
+            return;
+        }
+        // 插入位置不为空，说明发生了冲突，遍历链表
+        while (node != null) {
+            if ((node.key.hashCode() == key.hashCode())
+                && (node.key == key || node.key.equals(key))) {
+                    node.value = value;
+                    return;
+                }
+                node = node.next;
+        }
+        // 当前key不在链表中，插入链表头结点
+        Node newNode = new Node(key, value, table[index]);
+        table[index] = newNode;
+        size++;
+    }
+    // 扩容
+    private void resize() {
+        Node<K, V>[] newBuckets = new Node[buckets.length * 2];
+        rehash(newBuckets);
+        buckets = newBuckets;
+    }
+    // 重新散列当前元素
+    private void rehash(Node<K, V>[] newBuckets) {
+        // map大小重新计算
+        size = 0;
+        // 将旧的桶数组元素全部刷到新的桶数组中
+        for (int i = 0; i < buckets.length; i++) {
+            if (buckets[i] == null) {
+                continue;
+            }
+            Node<K, V> node = buckets[i];
+            while (node != null) {
+                putVal(node.key, node.value, newBuckets);
+                node = node.next;
+            }
+        }
+    }
+    // 获取元素
+    public V get(K key) {
+        int index = getIndex(key, buckets.length);
+        if (buckets[index] == null) return null;
+        Node<K, V> node = buckets[index];
+
+        while (node != null) {
+            if ((node.key.hashCode() == key.hashCode())
+            && (node.key == key || node.key.equals(key))) {
+                return node.value;
+            }
+            node = node.next;
+        }
+        return null;
+    }
+    // 返回HashMap大小
+    public int size() {
+        return size;
+    }
+}
+```
+
+## HashMap 是线程安全的吗？多线程下会有什么问题？
+HashMap 不是线程安全的，主要有以下几个问题：
+
+①、多线程下扩容会死循环。JDK1.7 中的 HashMap 使用的是头插法插入元素，在多线程的环境下，扩容的时候就有可能导致出现环形链表，造成死循环。
+
+②、多线程的 put 可能会导致元素的丢失。因为计算出来的位置可能会被其他线程的 put 覆盖。本来哈希冲突是应该用链表的，但多线程时由于没有加锁，相同位置的元素可能就被干掉了。
+
+③、put 和 get 并发时，可能导致 get 为 null。线程 1 执行 put 时，因为元素个数超出阈值而导致出现扩容，线程 2 此时执行 get，就有可能出现这个问题。
+
+## 有什么办法能解决 HashMap 线程不安全的问题呢？
+- Collections.synchronizedMap 返回的是 Collections 工具类的内部类。
+- ConcurrentHashMap 在 JDK 7 中使用分段锁，在 JKD 8 中使用了 CAS（Compare-And-Swap）+ synchronized 关键字，性能得到进一步提升。
+
+## HashMap 内部节点是有序的吗？
+HashMap 是无序的，根据 hash 值随机插入。如果想使用有序的 Map，可以使用 LinkedHashMap 或者 TreeMap。
+
+## 讲讲 LinkedHashMap 怎么实现有序的？
+LinkedHashMap 维护了一个双向链表，有头尾节点，同时 LinkedHashMap 节点 Entry 内部除了继承 HashMap 的 Node 属性，还有 before 和 after 用于标识前置节点和后置节点。可以实现按插入的顺序或访问顺序排序。
+
+## TreeMap 怎么实现有序的？
+TreeMap 通过 key 的比较器来决定元素的顺序，如果没有指定比较器，那么 key 必须实现 Comparable 接口。
+
+TreeMap 的底层是红黑树，红黑树是一种自平衡的二叉查找树，每个节点都大于其左子树中的任何节点，小于其右子节点树种的任何节点。
+
+插入或者删除元素时通过旋转和着色来保持树的平衡。
+
+查找的时候通过从根节点开始，利用二叉查找树的性质，逐步向左或者右子树递归查找，直到找到目标元素。
+
+## TreeMap 和 HashMap 的区别
+①、HashMap 是基于数组+链表+红黑树实现的，put 元素的时候会先计算 key 的哈希值，然后通过哈希值计算出数组的索引，然后将元素插入到数组中，如果发生哈希冲突，会使用链表来解决，如果链表长度大于 8，会转换为红黑树。
+
+get 元素的时候同样会先计算 key 的哈希值，然后通过哈希值计算出数组的索引，如果遇到链表或者红黑树，会通过 key 的 equals 方法来判断是否是要找的元素。
+
+②、TreeMap 是基于红黑树实现的，put 元素的时候会先判断根节点是否为空，如果为空，直接插入到根节点，如果不为空，会通过 key 的比较器来判断元素应该插入到左子树还是右子树。
+
+get 元素的时候会通过 key 的比较器来判断元素的位置，然后递归查找。
+
+由于 HashMap 是基于哈希表实现的，所以在没有发生哈希冲突的情况下，HashMap 的查找效率是 O(1)。适用于查找操作比较频繁的场景。
+
+而 TreeMap 是基于红黑树实现的，所以 TreeMap 的查找效率是 O(logn)。并且保证了元素的顺序，因此适用于需要大量范围查找或者有序遍历的场景。
+
+## 讲讲 HashSet 的底层实现？
+HashSet 其实是由 HashMap 实现的，只不过值由一个固定的 Object 对象填充，而键用于操作。
+
+实际开发中，HashSet 并不常用，比如，如果我们需要按照顺序存储一组元素，那么 ArrayList 和 LinkedList 可能更适合；如果我们需要存储键值对并根据键进行查找，那么 HashMap 可能更适合。
+
+HashSet 主要用于去重，比如，我们需要统计一篇文章中有多少个不重复的单词，就可以使用 HashSet 来实现。
+
+HashSet 会自动去重，因为它是用 HashMap 实现的，HashMap 的键是唯一的（哈希值），相同键的值会覆盖掉原来的值，于是第二次 set.add("沉默") 的时候就覆盖了第一次的 set.add("沉默")。
+
+## HashSet 和 ArrayList 的区别
+ArrayList 是基于动态数组实现的，HashSet 是基于 HashMap 实现的。
+ArrayList 允许重复元素和 null 值，可以有多个相同的元素；HashSet 保证每个元素唯一，不允许重复元素，基于元素的 hashCode 和 equals 方法来确定元素的唯一性。
+ArrayList 保持元素的插入顺序，可以通过索引访问元素；HashSet 不保证元素的顺序，元素的存储顺序依赖于哈希算法，并且可能随着元素的添加或删除而改变。
 
