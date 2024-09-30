@@ -1,0 +1,671 @@
+## Spring 是什么？特性？有哪些模块？
+一句话概括：Spring 是一个轻量级、非入侵式的控制反转 (IoC) 和面向切面 (AOP) 的框架。
+
+### Spring 有哪些特性呢？
+1. IoC 和 DI 的支持
+Spring 的核心就是一个大的工厂容器，可以维护所有对象的创建和依赖关系，Spring 工厂用于生成 Bean，并且管理 Bean 的生命周期，实现高内聚低耦合的设计理念。
+
+2. AOP 编程的支持
+Spring 提供了面向切面编程，可以方便的实现对程序进行权限拦截、运行监控等切面功能。
+
+3. 声明式事务的支持
+支持通过配置就来完成对事务的管理，而不需要通过硬编码的方式，以前重复的一些事务提交、回滚的 JDBC 代码，都可以不用自己写了。
+
+4. 快捷测试的支持
+Spring 对 Junit 提供支持，可以通过注解快捷地测试 Spring 程序。
+
+5. 快速集成功能
+方便集成各种优秀框架，Spring 不排斥各种优秀的开源框架，其内部提供了对各种优秀框架（如：Struts、Hibernate、MyBatis、Quartz 等）的直接支持。
+
+6. 复杂 API 模板封装
+Spring 对 JavaEE 开发中非常难用的一些 API（JDBC、JavaMail、远程调用等）都提供了模板化的封装，这些封装 API 的提供使得应用难度大大降低。
+
+## Spring 有哪些模块呢？
+Spring 框架是分模块存在，除了最核心的Spring Core Container是必要模块之外，其他模块都是可选，大约有 20 多个模块。
+
+最主要的七大模块：
+
+Spring Core：Spring 核心，它是框架最基础的部分，提供 IoC 和依赖注入 DI 特性。  
+Spring Context：Spring 上下文容器，它是 BeanFactory 功能加强的一个子接口。  
+Spring Web：它提供 Web 应用开发的支持。  
+Spring MVC：它针对 Web 应用中 MVC 思想的实现。  
+Spring DAO：提供对 JDBC 抽象层，简化了 JDBC 编码，同时，编码更具有健壮性。  
+Spring ORM：它支持用于流行的 ORM 框架的整合，比如：Spring + Hibernate、Spring + iBatis、Spring + JDO 的整合等。   
+Spring AOP：即面向切面编程，它提供了与 AOP 联盟兼容的编程实现。    
+
+## Spring 有哪些常用注解呢？
+![](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/sidebar/sanfene/spring-8d0a1518-a425-4887-9735-45321095d927.png)
+
+### Web 开发方面有哪些注解呢？     
+①、@Controller：用于标注控制层组件。
+
+②、@RestController：是@Controller 和 @ResponseBody 的结合体，返回 JSON 数据时使用。
+
+③、@RequestMapping：用于映射请求 URL 到具体的方法上，还可以细分为：
+
+@GetMapping：只能用于处理 GET 请求  
+@PostMapping：只能用于处理 POST 请求   
+@DeleteMapping：只能用于处理 DELETE 请求   
+
+④、@ResponseBody：直接将返回的数据放入 HTTP 响应正文中，一般用于返回 JSON 数据。
+
+⑤、@RequestBody：表示一个方法参数应该绑定到 Web 请求体。
+
+⑥、@PathVariable：用于接收路径参数，比如 @RequestMapping(“/hello/{name}”)，这里的 name 就是路径参数。
+
+⑦、@RequestParam：用于接收请求参数。比如 @RequestParam(name = "key") String key，这里的 key 就是请求参数。
+
+### 容器类注解有哪些呢？
+- @Component：标识一个类为 Spring 组件，使其能够被 Spring 容器自动扫描和管理。
+- @Service：标识一个业务逻辑组件（服务层）。比如 @Service("userService")，这里的 userService 就是 Bean 的名称。
+- @Repository：标识一个数据访问组件（持久层）。
+- @Autowired：按类型自动注入依赖。
+- @Configuration：用于定义配置类，可替换 XML 配置文件。
+- @Value：用于将 Spring Boot 中 application.properties 配置的属性值赋值给变量。
+
+### AOP 方面有哪些注解呢？
+@Aspect 用于声明一个切面，可以配合其他注解一起使用，比如：
+
+@After：在方法执行之后执行。
+@Before：在方法执行之前执行。
+@Around：方法前后均执行。
+@PointCut：定义切点，指定需要拦截的方法。
+
+### 事务注解有哪些？
+主要就是 @Transactional，用于声明一个方法需要事务支持。
+
+
+## Spring 中应用了哪些设计模式呢？
+Spring 框架中用了蛮多设计模式的：
+
+①、工厂模式：IoC 容器本身可以看作是一个巨大的工厂，负责创建和管理 Bean 的生命周期和依赖关系。
+
+像 BeanFactory 和 ApplicationContext 接口都提供了工厂模式的实现，负责实例化、配置和组装 Bean。
+
+②、代理模式：AOP 的实现就是基于代理模式的，如果配置了事务管理，Spring 会使用代理模式创建一个连接数据库的代理对象，来进行事务管理。
+
+③、单例模式：Spring 容器中的 Bean 默认都是单例的，这样可以保证 Bean 的唯一性，减少系统开销。
+
+④、模板模式：Spring 中的 JdbcTemplate，HibernateTemplate 等以 Template 结尾的类，都使用了模板方法模式。
+
+比如，我们使用 JdbcTemplate，只需要提供 SQL 语句和需要的参数就可以了，至于如何创建连接、执行 SQL、处理结果集等都由 JdbcTemplate 这个模板方法来完成。
+
+④、观察者模式：Spring 事件驱动模型就是观察者模式很经典的一个应用，Spring 中的 ApplicationListener 就是观察者，当有事件（ApplicationEvent）被发布，ApplicationListener 就能接收到信息。
+
+⑤、适配器模式：Spring MVC 中的 HandlerAdapter 就用了适配器模式。它允许 DispatcherServlet 通过统一的适配器接口与多种类型的请求处理器进行交互。
+
+⑥、策略模式：Spring 中有一个 Resource 接口，它的不同实现类，会根据不同的策略去访问资源。
+
+## Spring 容器、Web 容器之间的区别？（补充）
+Spring 容器是 Spring 框架的核心部分，负责管理应用程序中的对象生命周期和依赖注入。
+
+Web 容器（也称 Servlet 容器），是用于运行 Java Web 应用程序的服务器环境，支持 Servlet、JSP 等 Web 组件。常见的 Web 容器包括 Apache Tomcat、Jetty等。
+
+Spring MVC 是 Spring 框架的一部分，专门用于处理 Web 请求，基于 MVC（Model-View-Controller）设计模式。
+
+## 说一说什么是 IoC？什么是 DI？
+所谓的IoC（控制反转，Inversion of Control），就是由容器来控制对象的生命周期和对象之间的关系。以前是我们想要什么就自己创建什么，现在是我们需要什么容器就帮我们送来什么。
+
+也就是说，控制对象生命周期的不再是引用它的对象，而是容器，这就叫控制反转。
+
+婚介所就相当于一个 IoC 容器，我就是一个对象，我需要的女朋友就是另一个对象，我不用关心女朋友是怎么来的，我只需要告诉婚介所我需要什么样的女朋友，婚介所就帮我去找。
+
+Spring 倡导的开发方式就是这样，所有的类创建都通过 Spring 容器来，不再是开发者去 new，去 = null 销毁，这些创建和销毁的工作都交给 Spring 容器来。
+
+于是，对于某个对象来说，以前是它控制它依赖的对象，现在是所有对象都被 Spring 控制，这就是控制反转。
+
+## 说说什么是 DI？
+DI（依赖注入，Dependency Injection）：有人说 IoC 和 DI 是一回事，有人说 IoC 是思想，DI 是 IoC 的实现。2004 年，Martin Fowler 在他的文章《控制反转容器&依赖注入模式》首次提出了依赖注入这个名词。
+
+控制反转这个词太宽泛，并不能很好地解释这个框架的具体实现，于是就想到了一个新名词：依赖注入。
+
+打个比方，你现在想吃韭菜馅的饺子，这时候就有人用针管往你吃的饺子里注入韭菜鸡蛋馅。就好像 A 类需要 B 类，以前是 A 类自己 new 一个 B 类，现在是有人把 B 类注入到 A 类里。
+
+### 为什么要使用 IoC 呢？
+在平时的 Java 开发中，如果我们要实现某一个功能，可能至少需要两个以上的对象来协助完成，在没有 Spring 之前，每个对象在需要它的合作对象时，需要自己 new 一个，比如说 A 要使用 B，A 就对 B 产生了依赖，也就是 A 和 B 之间存在了一种耦合关系。
+
+有了 Spring 之后，就不一样了，创建 B 的工作交给了 Spring 来完成，Spring 创建好了 B 对象后就放到容器中，A 告诉 Spring 我需要 B，Spring 就从容器中取出 B 交给 A 来使用。
+
+至于 B 是怎么来的，A 就不再关心了，Spring 容器想通过 newnew 创建 B 还是 new 创建 B，无所谓。
+
+这就是 IoC 的好处，它降低了对象之间的耦合度，使得程序更加灵活，更加易于维护。
+
+### 能简单说一下 Spring IoC 的实现机制吗？
+Spring 的 IoC 本质就是一个大工厂，我们想想一个工厂是怎么运行的呢？
+
+- 生产产品：一个工厂最核心的功能就是生产产品。在 Spring 里，不用 Bean 自己来实例化，而是交给 Spring，应该怎么实现呢？——答案毫无疑问，反射。 那么这个厂子的生产管理是怎么做的？你应该也知道——工厂模式。
+
+- 库存产品：工厂一般都是有库房的，用来库存产品，毕竟生产的产品不能立马就拉走。Spring 我们都知道是一个容器，这个容器里存的就是对象，不能每次来取对象，都得现场来反射创建对象，得把创建出的对象存起来。
+
+- 订单处理：还有最重要的一点，工厂根据什么来提供产品呢？订单。这些订单可能五花八门，有线上签签的、有到工厂签的、还有工厂销售上门签的……最后经过处理，指导工厂的出货。
+
+    ![](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/sidebar/sanfene/spring-1d55c63d-2d12-43b1-9f43-428f5f4a1413.png)
+
+### Bean 定义：
+Bean 通过一个配置文件定义，把它解析成一个类型。
+```
+userDao:cn.fighter3.bean.UserDao
+```
+BeanDefinition.java
+
+bean 定义类，配置文件中 bean 定义对应的实体
+
+```java
+public class BeanDefinition {
+
+    private String beanName;
+
+    private Class beanClass;
+     //省略getter、setter
+ }
+```
+
+ResourceLoader.java  
+资源加载器，用来完成配置文件中配置的加载  
+```java
+public class ResourceLoader {
+
+    public static Map<String, BeanDefinition> getResource() {
+        Map<String, BeanDefinition> beanDefinitionMap = new HashMap<>(16);
+        Properties properties = new Properties();
+        try {
+            InputStream inputStream = ResourceLoader.class.getResourceAsStream("/beans.properties");
+            properties.load(inputStream);
+            Iterator<String> it = properties.stringPropertyNames().iterator();
+            while (it.hasNext()) {
+                String key = it.next();
+                String className = properties.getProperty(key);
+                BeanDefinition beanDefinition = new BeanDefinition();
+                beanDefinition.setBeanName(key);
+                Class clazz = Class.forName(className);
+                beanDefinition.setBeanClass(clazz);
+                beanDefinitionMap.put(key, beanDefinition);
+            }
+            inputStream.close();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return beanDefinitionMap;
+    }
+
+}
+```
+
+BeanRegister.java
+
+对象注册器，这里用于单例 bean 的缓存，我们大幅简化，默认所有 bean 都是单例的。可以看到所谓单例注册，也很简单，不过是往 HashMap 里存对象。
+```java
+public class BeanRegister {
+
+    //单例Bean缓存
+    private Map<String, Object> singletonMap = new HashMap<>(32);
+
+    /**
+     * 获取单例Bean
+     *
+     * @param beanName bean名称
+     * @return
+     */
+    public Object getSingletonBean(String beanName) {
+        return singletonMap.get(beanName);
+    }
+
+    /**
+     * 注册单例bean
+     *
+     * @param beanName
+     * @param bean
+     */
+    public void registerSingletonBean(String beanName, Object bean) {
+        if (singletonMap.containsKey(beanName)) {
+            return;
+        }
+        singletonMap.put(beanName, bean);
+    }
+
+}
+```
+
+BeanFactory.java   
+对象工厂，我们最核心的一个类，在它初始化的时候，创建了 bean 注册器，完成了资源的加载。
+
+获取 bean 的时候，先从单例缓存中取，如果没有取到，就创建并注册一个 bean
+```java
+public class BeanFactory {
+
+    private Map<String, BeanDefinition> beanDefinitionMap = new HashMap<>();
+
+    private BeanRegister beanRegister;
+
+    public BeanFactory() {
+        //创建bean注册器
+        beanRegister = new BeanRegister();
+        //加载资源
+        this.beanDefinitionMap = new ResourceLoader().getResource();
+    }
+
+    /**
+     * 获取bean
+     *
+     * @param beanName bean名称
+     * @return
+     */
+    public Object getBean(String beanName) {
+        //从bean缓存中取
+        Object bean = beanRegister.getSingletonBean(beanName);
+        if (bean != null) {
+            return bean;
+        }
+        //根据bean定义，创建bean
+        return createBean(beanDefinitionMap.get(beanName));
+    }
+
+    /**
+     * 创建Bean
+     *
+     * @param beanDefinition bean定义
+     * @return
+     */
+    private Object createBean(BeanDefinition beanDefinition) {
+        try {
+            Object bean = beanDefinition.getBeanClass().newInstance();
+            //缓存bean
+            beanRegister.registerSingletonBean(beanDefinition.getBeanName(), bean);
+            return bean;
+        } catch (InstantiationException | IllegalAccessException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+}
+```
+
+- 测试
+UserDao.java
+
+我们的 Bean 类，很简单
+```java
+public class UserDao {
+    public void queryUserInfo(){
+        System.out.println("A good man.");
+    }
+}
+```
+
+```java
+public class ApiTest {
+    @Test
+    public void test_BeanFactory() {
+        //1.创建bean工厂(同时完成了加载资源、创建注册单例bean注册器的操作)
+        BeanFactory beanFactory = new BeanFactory();
+
+        //2.第一次获取bean（通过反射创建bean，缓存bean）
+        UserDao userDao1 = (UserDao) beanFactory.getBean("userDao");
+        userDao1.queryUserInfo();
+
+        //3.第二次获取bean（从缓存中获取bean）
+        UserDao userDao2 = (UserDao) beanFactory.getBean("userDao");
+        userDao2.queryUserInfo();
+    }
+}
+```
+##  BeanFactory 和 ApplicantContext?
+可以这么比喻，BeanFactory 是 Spring 的“心脏”，而 ApplicantContext 是 Spring 的完整“身躯”。
+
+BeanFactory 主要负责配置、创建和管理 bean，为 Spring 提供了基本的依赖注入（DI）支持。
+ApplicationContext 是 BeanFactory 的子接口，在 BeanFactory 的基础上添加了企业级的功能支持。
+
+### 详细说说 BeanFactory
+BeanFactory 位于整个 Spring IoC 容器的顶端，ApplicationContext 算是 BeanFactory 的子接口。
+
+它最主要的方法就是 getBean()，这个方法负责从容器中返回特定名称或者类型的 Bean 实例。
+
+```java
+class HelloWorldApp{
+   public static void main(String[] args) {
+      BeanFactory factory = new XmlBeanFactory (new ClassPathResource("beans.xml"));
+      HelloWorld obj = (HelloWorld) factory.getBean("itwanger");
+      obj.getMessage();
+   }
+}
+```
+
+### 请详细说说 ApplicationContext
+ApplicationContext 继承了 HierachicalBeanFactory 和 ListableBeanFactory 接口，算是 BeanFactory 的自动挡版本，是 Spring 应用的默认方式。  
+
+ApplicationContext 会在启动时预先创建和配置所有的单例 bean，并支持如 JDBC、ORM 框架的集成，内置面向切面编程（AOP）的支持，可以配置声明式事务管理等。
+
+```java
+class MainApp {
+    public static void main(String[] args) {
+        // 使用 AppConfig 配置类初始化 ApplicationContext
+        ApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class);
+
+        // 从 ApplicationContext 获取 messageService 的 bean
+        MessageService service = context.getBean(MessageService.class);
+
+        // 使用 bean
+        service.printMessage();
+    }
+}
+```
+
+通过 AnnotationConfigApplicationContext 类，我们可以使用 Java 配置类来初始化 ApplicationContext，这样就可以使用 Java 代码来配置 Spring 容器。
+```java
+@Configuration
+@ComponentScan(basePackages = "com.github.paicoding.forum.test.javabetter.spring1") // 替换为你的包名
+public class AppConfig {
+}
+```
+
+##  Spring 容器启动阶段会干什么吗？
+Spring 的 IoC 容器工作的过程，其实可以划分为两个阶段：容器启动阶段和Bean 实例化阶段。
+
+其中容器启动阶段主要做的工作是加载和解析配置文件，保存到对应的 Bean 定义中。
+
+![](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/sidebar/sanfene/spring-8f8103f7-2a51-4858-856e-96a4ac400d76.png)
+
+容器启动开始，首先会通过某种途径加载 Congiguration MetaData，在大部分情况下，容器需要依赖某些工具类（BeanDefinitionReader）对加载的 Congiguration MetaData 进行解析和分析，并将分析后的信息组为相应的 BeanDefinition。
+
+最后把这些保存了 Bean 定义必要信息的 BeanDefinition，注册到相应的 BeanDefinitionRegistry，这样容器启动就完成了。
+
+### 说说 Spring 的 Bean 实例化方式
+Spring 提供了 4 种不同的方式来实例化 Bean，以满足不同场景下的需求。
+
+### 构造方法的方式
+在类上使用@Component（或@Service、@Repository 等特定于场景的注解）标注类，然后通过构造方法注入依赖。
+
+```java
+@Component
+public class ExampleBean {
+    private DependencyBean dependency;
+
+    @Autowired
+    public ExampleBean(DependencyBean dependency) {
+        this.dependency = dependency;
+    }
+}
+```
+
+### 静态工厂的方式
+在这种方式中，Bean 是由一个静态方法创建的，而不是直接通过构造方法。
+```java
+public class ClientService {
+    private static ClientService clientService = new ClientService();
+
+    private ClientService() {}
+
+    public static ClientService createInstance() {
+        return clientService;
+    }
+}
+```
+
+### 实例工厂方法实例化的方式
+与静态工厂方法相比，实例工厂方法依赖于某个类的实例来创建 Bean。这通常用在需要通过工厂对象的非静态方法来创建 Bean 的场景。
+
+```java
+public class ServiceLocator {
+    public ClientService createClientServiceInstance() {
+        return new ClientService();
+    }
+}
+```
+
+### FactoryBean 接口实例化方式
+FactoryBean 是一个特殊的 Bean 类型，可以在 Spring 容器中返回其他对象的实例。通过实现 FactoryBean 接口，可以自定义实例化逻辑，这对于构建复杂的初始化逻辑非常有用。
+
+## Spring Bean 生命周期吗？
+Spring 中 Bean 的生命周期大致分为四个阶段：实例化（Instantiation）、属性赋值（Populate）、初始化（Initialization）、销毁（Destruction）。
+
+- 实例化：Spring 容器根据 Bean 的定义创建 Bean 的实例，相当于执行构造方法，也就是 new 一个对象。
+- 属性赋值：相当于执行 setter 方法为字段赋值。
+- 初始化：初始化阶段允许执行自定义的逻辑，比如设置某些必要的属性值、开启资源、执行预加载操作等，以确保 Bean 在使用之前是完全配置好的。
+- 销毁：相当于执行 = null，释放资源。
+
+![](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/sidebar/sanfene/spring-942a927a-86e4-4a01-8f52-9addd89642ff.png)
+
+## Bean 定义和依赖定义有哪些方式？
+有三种方式：直接编码方式、配置文件方式、注解方式。
+
+- 直接编码方式：我们一般接触不到直接编码的方式，但其实其它的方式最终都要通过直接编码来实现。
+- 配置文件方式：通过 xml、propreties 类型的配置文件，配置相应的依赖关系，Spring 读取配置文件，完成依赖关系的注入。
+- 注解方式：注解方式应该是我们用的最多的一种方式了，在相应的地方使用注解修饰，Spring 会扫描注解，完成依赖关系的注入。
+
+## 有哪些依赖注入的方法？
+Spring 支持构造方法注入、属性注入、工厂方法注入,其中工厂方法注入，又可以分为静态工厂方法注入和非静态工厂方法注入。
+
+![](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/sidebar/sanfene/spring-491f8444-54ba-4628-b8eb-8418a2197096.png)
+
+- 构造方法注入   
+通过调用类的构造方法，将接口实现类通过构造方法变量传入
+```java
+public CatDaoImpl(String message){
+   this. message = message;
+ }
+
+<bean id="CatDaoImpl" class="com.CatDaoImpl">
+    <constructor-arg value=" message "></constructor-arg>
+</bean>
+```
+- 属性注入   
+通过 Setter 方法完成调用类所需依赖的注入
+```java
+ public class Id {
+    private int id;
+
+    public int getId() { return id; }
+
+    public void setId(int id) { this.id = id; }
+}
+
+<bean id="id" class="com.id ">
+  <property name="id" value="123"></property>
+</bean>
+```
+
+- 静态工厂注入   
+静态工厂顾名思义，就是通过调用静态工厂的方法来获取自己需要的对象，为了让 Spring 管理所有对象，我们不能直接通过"工程类.静态方法()"来获取对象，而是依然通过 Spring 注入的形式获取：  
+
+```java
+public class DaoFactory { //静态工厂
+
+   public static final FactoryDao getStaticFactoryDaoImpl(){
+      return new StaticFacotryDaoImpl();
+   }
+}
+
+public class SpringAction {
+
+ //注入对象
+ private FactoryDao staticFactoryDao;
+
+ //注入对象的 set 方法
+ public void setStaticFactoryDao(FactoryDao staticFactoryDao) {
+     this.staticFactoryDao = staticFactoryDao;
+ }
+
+}
+
+//factory-method="getStaticFactoryDaoImpl"指定调用哪个工厂方法
+ <bean name="springAction" class=" SpringAction" >
+   <!--使用静态工厂的方法注入对象,对应下面的配置文件-->
+   <property name="staticFactoryDao" ref="staticFactoryDao"></property>
+ </bean>
+
+ <!--此处获取对象的方式是从工厂类中获取静态方法-->
+<bean name="staticFactoryDao" class="DaoFactory"
+  factory-method="getStaticFactoryDaoImpl"></bean>
+```
+
+- 非静态工厂注入  
+非静态工厂，也叫实例工厂，意思是工厂方法不是静态的，所以我们需要首先 new 一个工厂实例，再调用普通的实例方法。  
+```java
+//非静态工厂
+public class DaoFactory {
+   public FactoryDao getFactoryDaoImpl(){
+     return new FactoryDaoImpl();
+   }
+ }
+
+public class SpringAction {
+  //注入对象
+  private FactoryDao factoryDao;
+
+  public void setFactoryDao(FactoryDao factoryDao) {
+    this.factoryDao = factoryDao;
+  }
+}
+
+ <bean name="springAction" class="SpringAction">
+   <!--使用非静态工厂的方法注入对象,对应下面的配置文件-->
+   <property name="factoryDao" ref="factoryDao"></property>
+ </bean>
+
+ <!--此处获取对象的方式是从工厂类中获取实例方法-->
+ <bean name="daoFactory" class="com.DaoFactory"></bean>
+
+<bean name="factoryDao" factory-bean="daoFactory" factory-method="getFactoryDaoImpl"></bean>
+```
+
+## Spring 有哪些自动装配的方式？
+Spring IoC 容器知道所有 Bean 的配置信息，此外，通过 Java 反射机制还可以获知实现类的结构信息，如构造方法的结构、属性等信息。掌握所有 Bean 的这些信息后，Spring IoC 容器就可以按照某种规则对容器中的 Bean 进行自动装配，而无须通过显式的方式进行依赖配置。
+
+Spring 提供的这种方式，可以按照某些规则进行 Bean 的自动装配，<bean>元素提供了一个指定自动装配类型的属性：autowire="<自动装配类型>"
+
+![](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/sidebar/sanfene/spring-034120d9-88c7-490b-af07-7d48f3b6b7bc.png)
+
+### Spring 提供了 4 种自动装配类型
+- byName：根据名称进行自动匹配，假设 Boss 又一个名为 car 的属性，如果容器中刚好有一个名为 car 的 bean，Spring 就会自动将其装配给 Boss 的 car 属性
+- byType：根据类型进行自动匹配，假设 Boss 有一个 Car 类型的属性，如果容器中刚好有一个 Car 类型的 Bean，Spring 就会自动将其装配给 Boss 这个属性
+- constructor：与 byType 类似， 只不过它是针对构造函数注入而言的。如果 Boss 有一个构造函数，构造函数包含一个 Car 类型的入参，如果容器中有一个 Car 类型的 Bean，则 Spring 将自动把这个 Bean 作为 Boss 构造函数的入参；如果容器中没有找到和构造函数入参匹配类型的 Bean，则 Spring 将抛出异常。
+- autodetect：根据 Bean 的自省机制决定采用 byType 还是 constructor 进行自动装配，如果 Bean 提供了默认的构造函数，则采用 byType，否则采用 constructor。
+
+## Spring 中的 Bean 的作用域有哪些?
+- singleton : 在 Spring 容器仅存在一个 Bean 实例，Bean 以单实例的方式存在，是 Bean 默认的作用域。
+- prototype : 每次从容器重调用 Bean 时，都会返回一个新的实例。
+以下三个作用域于只在 Web 应用中适用：    
+- request : 每一次 HTTP 请求都会产生一个新的 Bean，该 Bean 仅在当前 HTTP Request 内有效。
+- session : 同一个 HTTP Session 共享一个 Bean，不同的 HTTP Session 使用不同的 Bean。
+- globalSession：同一个全局 Session 共享一个 Bean，只用于基于 Protlet 的 Web 应用，Spring5 中已经不存在了。
+
+## Spring 中的单例 Bean 会存在线程安全问题吗？
+Spring Bean 的默认作用域是单例（Singleton），这意味着 Spring 容器中只会存在一个 Bean 实例，并且该实例会被多个线程共享。
+
+如果单例 Bean 是无状态的，也就是没有成员变量，那么这个单例 Bean 是线程安全的。比如 Spring MVC 中的 Controller、Service、Dao 等，基本上都是无状态的。
+
+但如果 Bean 的内部状态是可变的，且没有进行适当的同步处理，就可能出现线程安全问题。  
+
+### 单例 Bean 线程安全问题怎么解决呢？
+1. 使用局部变量。局部变量是线程安全的，因为每个线程都有自己的局部变量副本。尽量使用局部变量而不是共享的成员变量。
+2. 尽量使用无状态的 Bean，即不在 Bean 中保存任何可变的状态信息。
+3. 同步访问。如果 Bean 中确实需要保存可变状态，可以通过 synchronized 关键字或者 Lock 接口来保证线程安全。 或者将 Bean 中的成员变量保存到 ThreadLocal 中，ThreadLocal 可以保证多线程环境下变量的隔离。再或者使用线程安全的工具类，比如说 AtomicInteger、ConcurrentHashMap、CopyOnWriteArrayList 等。
+5. 将 Bean 定义为原型作用域（Prototype）。原型作用域的 Bean 每次请求都会创建一个新的实例，因此不存在线程安全问题。
+
+## 说说循环依赖?
+A 依赖 B，B 依赖 A，或者 C 依赖 C，就成了循环依赖。
+![](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/sidebar/sanfene/spring-f8fea53f-56fa-4cca-9199-ec7f648da625.png)
+
+当然了，循环依赖只发生在 Singleton 作用域的 Bean 之间，因为如果是 Prototype 作用域的 Bean，Spring 会直接抛出异常。
+
+原因很简单，AB 循环依赖，A 实例化的时候，发现依赖 B，创建 B 实例，创建 B 的时候发现需要 A，创建 A1 实例……无限套娃。。。。
+
+```java
+@Component
+@Scope("prototype")
+public class PrototypeBeanA {
+    private final PrototypeBeanB prototypeBeanB;
+
+    @Autowired
+    public PrototypeBeanA(PrototypeBeanB prototypeBeanB) {
+        this.prototypeBeanB = prototypeBeanB;
+    }
+}
+```
+
+```java
+@Component
+@Scope("prototype")
+public class PrototypeBeanB {
+    private final PrototypeBeanA prototypeBeanA;
+
+    @Autowired
+    public PrototypeBeanB(PrototypeBeanA prototypeBeanA) {
+        this.prototypeBeanA = prototypeBeanA;
+    }
+}
+```
+```java
+@SpringBootApplication
+public class DemoApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(DemoApplication.class, args);
+    }
+
+    @Bean
+    CommandLineRunner commandLineRunner(ApplicationContext ctx) {
+        return args -> {
+            // 尝试获取PrototypeBeanA的实例
+            PrototypeBeanA beanA = ctx.getBean(PrototypeBeanA.class);
+        };
+    }
+}
+```
+
+## Spring 可以解决哪些情况的循环依赖？
+- AB 均采用构造器注入，不支持
+- AB 均采用 setter 注入，支持
+- AB 均采用属性自动注入，支持
+- A 中注入的 B 为 setter 注入，B 中注入的 A 为构造器注入，支持
+- B 中注入的 A 为 setter 注入，A 中注入的 B 为构造器注入，不支持   
+
+第四种可以，第五种不可以的原因是 Spring 在创建 Bean 时默认会根据自然排序进行创建，所以 A 会先于 B 进行创建。
+
+简单总结下，当循环依赖的实例都采用 setter 方法注入时，Spring 支持，都采用构造器注入的时候，不支持；构造器注入和 setter 注入同时存在的时候，看天（😂）。
+
+## 那 Spring 怎么解决循环依赖的呢？  
+Spring 通过三级缓存（Three-Level Cache）机制来解决循环依赖。
+
+- 一级缓存：用于存放完全初始化好的单例 Bean。
+- 二级缓存：用于存放正在创建但未完全初始化的 Bean 实例。
+- 三级缓存：用于存放 Bean 工厂对象，用于提前暴露 Bean。  
+
+### 三级缓存解决循环依赖的过程是什么样的？
+假如 A、B 两个类发生循环依赖：
+
+A 实例的初始化过程：
+
+①、创建 A 实例，实例化的时候把 A 的对象⼯⼚放⼊三级缓存，表示 A 开始实例化了，虽然这个对象还不完整，但是先曝光出来让大家知道。
+
+![](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/sidebar/sanfene/spring-1a8bdc29-ff43-4ff4-9b61-3eedd9da59b3.png)
+
+②、A 注⼊属性时，发现依赖 B，此时 B 还没有被创建出来，所以去实例化 B。
+
+③、同样，B 注⼊属性时发现依赖 A，它就从缓存里找 A 对象。依次从⼀级到三级缓存查询 A。
+
+发现可以从三级缓存中通过对象⼯⼚拿到 A，虽然 A 不太完善，但是存在，就把 A 放⼊⼆级缓存，同时删除三级缓存中的 A，此时，B 已经实例化并且初始化完成了，把 B 放入⼀级缓存。
+![](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/sidebar/sanfene/spring-bf2507bf-96aa-4b88-a58b-7ec41d11bc70.png)
+
+④、接着 A 继续属性赋值，顺利从⼀级缓存拿到实例化且初始化完成的 B 对象，A 对象创建也完成，删除⼆级缓存中的 A，同时把 A 放⼊⼀级缓存
+
+⑤、最后，⼀级缓存中保存着实例化、初始化都完成的 A、B 对象。
+![](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/sidebar/sanfene/spring-022f7cb9-2c83-4fe9-b252-b02bd0fb2435.png)
+
+## 为什么要三级缓存？⼆级不⾏吗？
+不行，主要是为了**⽣成代理对象**。如果是没有代理的情况下，使用二级缓存解决循环依赖也是 OK 的。但是如果存在代理，三级没有问题，二级就不行了。
+
+因为三级缓存中放的是⽣成具体对象的匿名内部类，获取 Object 的时候，它可以⽣成代理对象，也可以返回普通对象。使⽤三级缓存主要是为了保证不管什么时候使⽤的都是⼀个对象。
+
+假设只有⼆级缓存的情况，往⼆级缓存中放的显示⼀个普通的 Bean 对象，Bean 初始化过程中，通过 BeanPostProcessor 去⽣成代理对象之后，覆盖掉⼆级缓存中的普通 Bean 对象，那么可能就导致取到的 Bean 对象不一致了。
+
+## @Autowired 的实现原理？
+AutowiredAnnotationBeanPostProcessor
+
+在 Bean 的初始化阶段，会通过 Bean 后置处理器来进行一些前置和后置的处理。
+
+实现@Autowired 的功能，也是通过后置处理器来完成的。这个后置处理器就是 AutowiredAnnotationBeanPostProcessor。
+
+- Spring 在创建 bean 的过程中，最终会调用到 doCreateBean()方法，在 doCreateBean()方法中会调用 populateBean()方法，来为 bean 进行属性填充，完成自动装配等工作。
+
+- 在 populateBean()方法中一共调用了两次后置处理器，第一次是为了判断是否需要属性填充，如果不需要进行属性填充，那么就会直接进行 return，如果需要进行属性填充，那么方法就会继续向下执行，后面会进行第二次后置处理器的调用，这个时候，就会调用到 AutowiredAnnotationBeanPostProcessor 的 postProcessPropertyValues()方法，在该方法中就会进行@Autowired 注解的解析，然后实现自动装配。
