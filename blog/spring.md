@@ -669,3 +669,56 @@ AutowiredAnnotationBeanPostProcessor
 - Spring 在创建 bean 的过程中，最终会调用到 doCreateBean()方法，在 doCreateBean()方法中会调用 populateBean()方法，来为 bean 进行属性填充，完成自动装配等工作。
 
 - 在 populateBean()方法中一共调用了两次后置处理器，第一次是为了判断是否需要属性填充，如果不需要进行属性填充，那么就会直接进行 return，如果需要进行属性填充，那么方法就会继续向下执行，后面会进行第二次后置处理器的调用，这个时候，就会调用到 AutowiredAnnotationBeanPostProcessor 的 postProcessPropertyValues()方法，在该方法中就会进行@Autowired 注解的解析，然后实现自动装配。
+
+## 说说什么是 AOP？
+AOP，也就是 Aspect-oriented Programming，译为面向切面编程，是 Spring 中最重要的核心概念之一。
+
+简单点说，AOP 就是把一些业务逻辑中的相同代码抽取到一个独立的模块中，让业务逻辑更加清爽。
+
+### AOP 有哪些核心概念？
+- 切面（Aspect）：类是对物体特征的抽象，切面就是对横切关注点的抽象
+- 连接点（Join Point）：被拦截到的点，因为 Spring 只支持方法类型的连接点，所以在 Spring 中，连接点指的是被拦截到的方法，实际上连接点还可以是字段或者构造方法
+- 切点（Pointcut）：对连接点进行拦截的定位
+- 通知（Advice）：指拦截到连接点之后要执行的代码，也可以称作增强
+- 目标对象 （Target）：代理的目标对象
+- 引介（introduction）：一种特殊的增强，可以动态地为类添加一些属性和方法
+- 织入（Weabing）：织入是将增强添加到目标类的具体连接点上的过程。
+
+### 织入有哪几种方式？
+①、编译期织入：切面在目标类编译时被织入。
+
+②、类加载期织入：切面在目标类加载到 JVM 时被织入。需要特殊的类加载器，它可以在目标类被引入应用之前增强该目标类的字节码。
+
+③、运行期织入：切面在应用运行的某个时刻被织入。一般情况下，在织入切面时，AOP 容器会为目标对象动态地创建一个代理对象。
+
+Spring AOP 采用运行期织入
+
+### AOP 有哪些环绕方式？
+AOP 一般有 5 种环绕方式：
+1. 前置通知 (@Before)
+2. 返回通知 (@AfterReturning)
+3. 异常通知 (@AfterThrowing)
+4. 后置通知 (@After)
+5. 环绕通知 (@Around)
+
+### Spring AOP 发生在什么时候？
+Spring AOP 基于运行时代理机制，这意味着 Spring AOP 是在运行时通过动态代理生成的，而不是在编译时或类加载时生成的。
+
+在 Spring 容器初始化 Bean 的过程中，Spring AOP 会检查 Bean 是否需要应用切面。如果需要，Spring 会为该 Bean 创建一个代理对象，并在代理对象中织入切面逻辑。这一过程发生在 Spring 容器的后处理器（BeanPostProcessor）阶段。
+
+### 简单总结一下 AOP
+AOP，也就是面向切面编程，是一种编程范式，旨在提高代码的模块化。比如说可以将日志记录、事务管理等分离出来，来提高代码的可重用性。
+
+AOP 的核心概念包括切面（Aspect）、连接点（Join Point）、通知（Advice）、切点（Pointcut）和织入（Weaving）等。
+
+① 像日志打印、事务管理等都可以抽离为切面，可以声明在类的方法上。像 @Transactional 注解，就是一个典型的 AOP 应用，它就是通过 AOP 来实现事务管理的。我们只需要在方法上添加 @Transactional 注解，Spring 就会在方法执行前后添加事务管理的逻辑。
+
+② Spring AOP 是基于代理的，它默认使用 JDK 动态代理和 CGLIB 代理来实现 AOP。
+
+③ Spring AOP 的织入方式是运行时织入，而 AspectJ 支持编译时织入、类加载时织入。
+
+
+## 你平时有用到 AOP 吗？
+我利用 AOP 打印了接口的入参和出参日志，以及执行时间。
+
+
