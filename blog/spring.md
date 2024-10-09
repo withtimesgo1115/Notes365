@@ -925,3 +925,254 @@ public User user(){
 6. 执行完请求后，返回的 ModealAndView 为 null，ServletServerHttpResponse 里也已经写入了响应，所以不用关心 View 的处理
 
 
+## 介绍一下 SpringBoot，有哪些优点？
+Spring Boot 是一个开源的、用于简化 Spring 应用初始化和开发过程的框架。提供了一套默认配置，约定优于配置，来帮助我们快速搭建 Spring 项目骨架，极大地提高了我们的生产效率，再也不用为 Spring 的繁琐配置而烦恼了。
+
+以前的 Spring 开发需要配置大量的 xml 文件，并且需要引入大量的第三方 jar 包，还需要手动放到 classpath 下。
+
+Spring Boot 的优点非常多，比如说：
+
+- 通过 Intellij IDEA 或者官方的 Spring Initializr 就可以快速创建新项目，只需要选择需要的依赖就可以五分钟内搭建一个项目骨架。
+- Spring Boot 内嵌了 Tomcat、Jetty、Undertow 等容器，不需要在服务器上部署 WAR 包了，直接运行 jar 包就可以启动项目，超级方便。
+- Spring Boot 无需再像以前一样在 web.xml、applicationContext.xml 等配置文件里配置大量的内容，大部分初始工作 Spring Boot 都帮我们做好了。例如，如果项目中添加了 spring-boot-starter-web，Spring Boot 会自动配置 Tomcat 和 Spring MVC。
+- Spring Boot 允许我们通过 yaml 来管理应用的配置，比传统的 properties 文件更加简洁。
+- Spring Boot 提供了一系列的 Starter，可以快速集成常用的框架，例如 Spring Data JPA、Spring Security、MyBatis 等。
+- Spring Boot 提供了一系列的 Actuator，可以帮助我们监控和管理应用，比如健康检查、审计、统计等。
+- 配合 Spring Cloud 可以快速构建微服务架构。
+
+## SpringBoot 自动配置原理了解吗？
+在 Spring 中，自动装配是指容器利用反射技术，根据 Bean 的类型、名称等自动注入所需的依赖。
+
+在 Spring Boot 中，开启自动装配的注解是@EnableAutoConfiguration。
+
+①、@EnableAutoConfiguration 只是一个简单的注解，但是它的背后却是一个非常复杂的自动装配机制，核心是AutoConfigurationImportSelector 类。
+
+```java
+@AutoConfigurationPackage //将main同级的包下的所有组件注册到容器中
+@Import({AutoConfigurationImportSelector.class}) //加载自动装配类 xxxAutoconfiguration
+public @interface EnableAutoConfiguration {
+    String ENABLED_OVERRIDE_PROPERTY = "spring.boot.enableautoconfiguration";
+
+    Class<?>[] exclude() default {};
+
+    String[] excludeName() default {};
+}
+```
+
+②、AutoConfigurationImportSelector实现了ImportSelector接口，这个接口的作用就是收集需要导入的配置类，配合@Import()就将相应的类导入到 Spring 容器中。
+
+③、获取注入类的方法是 selectImports()，它实际调用的是getAutoConfigurationEntry()，这个方法是获取自动装配类的关键。
+
+```java
+protected AutoConfigurationEntry getAutoConfigurationEntry(AnnotationMetadata annotationMetadata) {
+    // 检查自动配置是否启用。如果@ConditionalOnClass等条件注解使得自动配置不适用于当前环境，则返回一个空的配置条目。
+    if (!isEnabled(annotationMetadata)) {
+        return EMPTY_ENTRY;
+    }
+
+    // 获取启动类上的@EnableAutoConfiguration注解的属性，这可能包括对特定自动配置类的排除。
+    AnnotationAttributes attributes = getAttributes(annotationMetadata);
+
+    // 从spring.factories中获取所有候选的自动配置类。这是通过加载META-INF/spring.factories文件中对应的条目来实现的。
+    List<String> configurations = getCandidateConfigurations(annotationMetadata, attributes);
+
+    // 移除配置列表中的重复项，确保每个自动配置类只被考虑一次。
+    configurations = removeDuplicates(configurations);
+
+    // 根据注解属性解析出需要排除的自动配置类。
+    Set<String> exclusions = getExclusions(annotationMetadata, attributes);
+
+    // 检查排除的类是否存在于候选配置中，如果存在，则抛出异常。
+    checkExcludedClasses(configurations, exclusions);
+
+    // 从候选配置中移除排除的类。
+    configurations.removeAll(exclusions);
+
+    // 应用过滤器进一步筛选自动配置类。过滤器可能基于条件注解如@ConditionalOnBean等来排除特定的配置类。
+    configurations = getConfigurationClassFilter().filter(configurations);
+
+    // 触发自动配置导入事件，允许监听器对自动配置过程进行干预。
+    fireAutoConfigurationImportEvents(configurations, exclusions);
+
+    // 创建并返回一个包含最终确定的自动配置类和排除的配置类的AutoConfigurationEntry对象。
+    return new AutoConfigurationEntry(configurations, exclusions);
+}
+```
+
+Spring Boot 的自动装配原理依赖于 Spring 框架的依赖注入和条件注册，通过这种方式，Spring Boot 能够智能地配置 bean，并且只有当这些 bean 实际需要时才会被创建和配置。
+
+
+## 如何自定义一个 SpringBoot Srarter?
+创建一个自定义的 Spring Boot Starter，需要这几步：
+
+1. 创建一个新的 Maven 项目，例如命名为 my-spring-boot-starter。在 pom.xml 文件中添加必要的依赖和配置：
+```xml
+<properties>
+    <spring.boot.version>2.3.1.RELEASE</spring.boot.version>
+</properties>
+
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-autoconfigure</artifactId>
+        <version>${spring.boot.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter</artifactId>
+        <version>${spring.boot.version}</version>
+    </dependency>
+</dependencies>
+```
+
+2. 在 src/main/java 下创建一个自动配置类，比如 MyServiceAutoConfiguration.java：（通常是 autoconfigure 包下）。
+```java
+@Configuration
+@EnableConfigurationProperties(MyStarterProperties.class)
+public class MyServiceAutoConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean
+    public MyService myService(MyStarterProperties properties) {
+        return new MyService(properties.getMessage());
+    }
+}
+```
+
+3. 创建一个配置属性类 MyStarterProperties.java：
+```java
+@ConfigurationProperties(prefix = "mystarter")
+public class MyStarterProperties {
+    private String message = "二哥的 Java 进阶之路不错啊!";
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+}
+```
+
+4. 创建一个简单的服务类 MyService.java：
+```java
+public class MyService {
+    private final String message;
+
+    public MyService(String message) {
+        this.message = message;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+}
+```
+
+5. 配置 spring.factories，在 src/main/resources/META-INF 目录下创建 spring.factories 文件，并添加：
+
+6. 使用 Maven 打包这个项目：
+
+7. 在其他的 Spring Boot 项目中，通过 Maven 来添加这个自定义的 Starter 依赖，并通过 application.properties 配置欢迎消息：
+
+
+
+## Spring Boot Starter 的原理了解吗？
+Spring Boot Starter 主要通过起步依赖和自动配置机制来简化项目的构建和配置过程。
+
+起步依赖是 Spring Boot 提供的一组预定义依赖项，它们将一组相关的库和模块打包在一起。比如 spring-boot-starter-web 就包含了 Spring MVC、Tomcat 和 Jackson 等依赖。
+
+自动配置机制是 Spring Boot 的核心特性，通过自动扫描类路径下的类、资源文件和配置文件，自动创建和配置应用程序所需的 Bean 和组件。
+
+比如有了 spring-boot-starter-web，我们开发者就不需要再手动配置 Tomcat、Spring MVC 等，Spring Boot 会自动帮我们完成这些工作。
+
+## Spring Boot 启动原理了解吗？
+Spring Boot Starter 主要通过起步依赖和自动配置机制来简化项目的构建和配置过程。
+
+起步依赖是 Spring Boot 提供的一组预定义依赖项，它们将一组相关的库和模块打包在一起。比如 spring-boot-starter-web 就包含了 Spring MVC、Tomcat 和 Jackson 等依赖。
+
+自动配置机制是 Spring Boot 的核心特性，通过自动扫描类路径下的类、资源文件和配置文件，自动创建和配置应用程序所需的 Bean 和组件。
+
+比如有了 spring-boot-starter-web，我们开发者就不需要再手动配置 Tomcat、Spring MVC 等，Spring Boot 会自动帮我们完成这些工作。
+
+## SpringBoot 和 SpringMVC 的区别？（补充）
+Spring MVC 是基于 Spring 框架的一个模块，提供了一种 Model-View-Controller（模型-视图-控制器）的开发模式。
+
+Spring Boot 旨在简化 Spring 应用的配置和部署过程，提供了大量的自动配置选项，以及运行时环境的内嵌 Web 服务器，这样就可以更快速地开发一个 SpringMVC 的 Web 项目。
+
+## Spring Boot 和 Spring 有什么区别？（补充）
+Spring Boot 是 Spring Framework 的一个扩展，提供了一套快速配置和开发的框架，可以帮助我们快速搭建 Spring 项目骨架，极大地提高了我们的生产效率。
+
+
+|特性	| Spring Framework |	Spring Boot |
+| ---- | ---- | ---- |
+| 目的	 | 提供全面的企业级开发工具和库	| 简化 Spring 应用的开发、配置和部署
+| 配置方式	| 主要通过 XML 和注解配置 |	主要通过注解和外部配置文件
+| 启动和运行	| 需要手动配置和部署到服务器| 	支持嵌入式服务器，打包成 JAR 文件直接运行
+| 自动配置	| 手动配置各种组件和依赖	| 提供开箱即用的自动配置
+| 依赖管理	| 手动添加和管理依赖	| 使用 spring-boot-starter 简化依赖管理
+| 模块化 | 	高度模块化，可以选择使用不同的模块|	集成多个常用模块，提供统一的启动入口
+| 生产准备功能	| 需要手动集成和配置	|内置监控、健康检查等生产准备功能
+
+## 对 SpringCloud 了解多少？
+Spring Cloud 是一个基于 Spring Boot，提供构建分布式系统和微服务架构的工具集。用于解决分布式系统中的一些常见问题，如配置管理、服务发现、负载均衡等等。
+
+### 什么是微服务？
+微服务架构是一种架构模式，提倡将单一应用程序划分成一组小的服务，服务之间相互协调，互相配合，为用户提供最终价值。每个服务运行在其独立的进程中，服务与服务之间采用轻量级的通信机制(如 HTTP 或 Dubbo)互相协作，每个服务都围绕着具体的业务进行构建，并且能够被独立的部署到生产环境中，另外，应尽量避免统一的，集中式的服务管理机制，对具体的一个服务而言，应根据业务上下文，选择合适的语言、工具(如 Maven)对其进行构建。
+
+微服务化的核心就是将传统的一站式应用，根据业务拆分成一个一个的服务，彻底地去耦合，每一个微服务提供单个业务功能的服务，一个服务做一件事情，从技术角度看就是一种小而独立的处理过程，类似进程的概念，能够自行单独启动或销毁，拥有自己独立的数据库。
+
+
+### 微服务架构主要要解决哪些问题？
+1. 服务很多，客户端怎么访问，如何提供对外网关?
+2. 这么多服务，服务之间如何通信? HTTP 还是 RPC?
+3. 这么多服务，如何治理? 服务的注册和发现。
+4. 服务挂了怎么办？熔断机制。
+
+
+## SpringTask 了解吗？
+SpringTask 是 Spring 框架提供的一个轻量级的任务调度框架，它允许我们开发者通过简单的注解来配置和管理定时任务。
+
+①、@Scheduled：最常用的注解，用于标记方法为计划任务的执行点。技术派实战项目中，就使用该注解来定时刷新 sitemap.xml：
+
+②、@EnableScheduling：用于开启定时任务的支持。
+
+### 用SpringTask资源占用太高，有什么其他的方式解决？（补充）
+第一，使用消息队列，如 RabbitMQ、Kafka、RocketMQ 等，将任务放到消息队列中，然后由消费者异步处理这些任务。
+
+①、在订单创建时，将订单超时检查任务放入消息队列，并设置延迟时间（即订单超时时间）。
+
+```java
+@Service
+public class OrderService {
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    public void createOrder(Order order) {
+        // 创建订单逻辑
+        // ...
+        
+        // 发送延迟消息
+        rabbitTemplate.convertAndSend("orderExchange", "orderTimeoutQueue", order, message -> {
+            message.getMessageProperties().setExpiration("600000"); // 设置延迟时间（10分钟）
+            return message;
+        });
+    }
+}
+```
+②、使用消费者从队列中消费消息，当消费到超时任务时，执行订单超时处理逻辑。
+```java
+@Service
+public class OrderTimeoutConsumer {
+
+    @RabbitListener(queues = "orderTimeoutQueue")
+    public void handleOrderTimeout(Order order) {
+        // 处理订单超时逻辑
+        // ...
+    }
+}
+```
+
+第二，使用数据库调度器（如 Quartz）。
+
