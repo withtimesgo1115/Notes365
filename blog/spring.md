@@ -721,4 +721,207 @@ AOP 的核心概念包括切面（Aspect）、连接点（Join Point）、通知
 ## 你平时有用到 AOP 吗？
 我利用 AOP 打印了接口的入参和出参日志，以及执行时间。
 
+1. 自定义一个注解作为切点
+2. 配置 AOP 切面
+3. 在使用的地方加上自定义注解
+4. 当接口被调用时，就可以看到对应的执行日志。
+
+## 说说 JDK 动态代理和 CGLIB 代理？
+Spring 的 AOP 是通过动态代理来实现的，动态代理主要有两种方式：JDK 动态代理和 CGLIB 代理。
+
+①、JDK 动态代理是基于接口的代理，只能代理实现了接口的类。使用 JDK 动态代理时，Spring AOP 会创建一个代理对象，该代理对象实现了目标对象所实现的接口，并在方法调用前后插入横切逻辑。
+
+优点：只需依赖 JDK 自带的 java.lang.reflect.Proxy 类，不需要额外的库；缺点：只能代理接口，不能代理类本身。
+
+②、CGLIB 动态代理是基于继承的代理，可以代理没有实现接口的类。使用 CGLIB 动态代理时，Spring AOP 会生成目标类的子类，并在方法调用前后插入横切逻辑。
+
+优点：可以代理没有实现接口的类，灵活性更高；缺点：需要依赖 CGLIB 库，创建代理对象的开销相对较大。
+
+### 选择 CGLIB 还是 JDK 动态代理？
+如果目标对象没有实现任何接口，则只能使用 CGLIB 代理。如果目标对象实现了接口，通常首选 JDK 动态代理。    
+ 
+虽然 CGLIB 在代理类的生成过程中可能消耗更多资源，但在运行时具有较高的性能。对于性能敏感且代理对象创建频率不高的场景，可以考虑使用 CGLIB。
+
+JDK 动态代理是 Java 原生支持的，不需要额外引入库。而 CGLIB 需要将 CGLIB 库作为依赖加入项目中。
+
+
+## 说说 Spring AOP 和 AspectJ AOP 区别?
+Spring AOP 属于运行时增强，主要具有如下特点：
+
+基于动态代理来实现，默认如果使用接口的，用 JDK 提供的动态代理实现，如果是方法则使用 CGLIB 实现
+
+Spring AOP 需要依赖 IoC 容器来管理，并且只能作用于 Spring 容器，使用纯 Java 代码实现
+
+在性能上，由于 Spring AOP 是基于动态代理来实现的，在容器启动时需要生成代理实例，在方法调用上也会增加栈的深度，使得 Spring AOP 的性能不如 AspectJ 的那么好。
+
+Spring AOP 致力于解决企业级开发中最普遍的 AOP(方法织入)。
+
+AspectJ 是一个易用的功能强大的 AOP 框架，属于编译时增强， 可以单独使用，也可以整合到其它框架中，是 AOP 编程的完全解决方案。AspectJ 需要用到单独的编译器 ajc。
+
+AspectJ 属于静态织入，通过修改代码来实现，在实际运行之前就完成了织入，所以说它生成的类是没有额外运行时开销的，一般有如下几个织入的时机：
+
+编译期织入（Compile-time weaving）：如类 A 使用 AspectJ 添加了一个属性，类 B 引用了它，这个场景就需要编译期的时候就进行织入，否则没法编译类 B。
+
+编译后织入（Post-compile weaving）：也就是已经生成了 .class 文件，或已经打成 jar 包了，这种情况我们需要增强处理的话，就要用到编译后织入。
+
+类加载后织入（Load-time weaving）：指的是在加载类的时候进行织入，要实现这个时期的织入，有几种常见的方法
+
+## 说说 AOP 和反射的区别？（补充）
+反射：用于检查和操作类的方法和字段，动态调用方法或访问字段。反射是 Java 提供的内置机制，直接操作类对象。  
+
+动态代理：通过生成代理类来拦截方法调用，通常用于 AOP 实现。动态代理使用反射来调用被代理的方法。 
+
+
+
+## 事务  
+Spring 事务的本质其实就是数据库对事务的支持，没有数据库的事务支持，Spring 是无法提供事务功能的。Spring 只提供统一事务管理接口，具体实现都是由各数据库自己实现，数据库事务的提交和回滚是通过数据库自己的事务机制实现。
+
+## Spring 事务的种类？
+在 Spring 中，事务管理可以分为两大类：声明式事务管理和编程式事务管理。 
+### 介绍一下编程式事务管理？
+编程式事务可以使用 TransactionTemplate 和 PlatformTransactionManager 来实现，需要显式执行事务。允许我们在代码中直接控制事务的边界，通过编程方式明确指定事务的开始、提交和回滚。
+
+### 介绍一下声明式事务管理？
+声明式事务是建立在 AOP 之上的。其本质是通过 AOP 功能，对方法前后进行拦截，将事务处理的功能编织到拦截的方法中，也就是在目标方法开始之前启动一个事务，在目标方法执行完之后根据执行情况提交或者回滚事务。
+
+相比较编程式事务，优点是不需要在业务逻辑代码中掺杂事务管理的代码， Spring 推荐通过 @Transactional 注解的方式来实现声明式事务管理，也是日常开发中最常用的。
+
+不足的地方是，声明式事务管理最细粒度只能作用到方法级别，无法像编程式事务那样可以作用到代码块级别。
+
+### 说说两者的区别？
+编程式事务管理：需要在代码中显式调用事务管理的 API 来控制事务的边界，比较灵活，但是代码侵入性较强，不够优雅。    
+声明式事务管理：这种方式使用 Spring 的 AOP 来声明事务，将事务管理代码从业务代码中分离出来。优点是代码简洁，易于维护。但缺点是不够灵活，只能在预定义的方法上使用事务。
+
+
+## 说说 Spring 的事务隔离级别？
+事务的隔离级别定义了一个事务可能受其他并发事务影响的程度。SQL 标准定义了四个隔离级别，Spring 都支持，并且提供了对应的机制来配置它们，定义在 TransactionDefinition 接口中。
+
+①、ISOLATION_DEFAULT：使用数据库默认的隔离级别（你们爱咋咋滴 😁），MySQL 默认的是可重复读，Oracle 默认的读已提交。
+
+②、ISOLATION_READ_UNCOMMITTED：读未提交，允许事务读取未被其他事务提交的更改。这是隔离级别最低的设置，可能会导致“脏读”问题。
+
+③、ISOLATION_READ_COMMITTED：读已提交，确保事务只能读取已经被其他事务提交的更改。这可以防止“脏读”，但仍然可能发生“不可重复读”和“幻读”问题。
+
+④、ISOLATION_REPEATABLE_READ：可重复读，确保事务可以多次从一个字段中读取相同的值，即在这个事务内，其他事务无法更改这个字段，从而避免了“不可重复读”，但仍可能发生“幻读”问题。
+
+⑤、ISOLATION_SERIALIZABLE：串行化，这是最高的隔离级别，它完全隔离了事务，确保事务序列化执行，以此来避免“脏读”、“不可重复读”和“幻读”问题，但性能影响也最大。
+
+
+## Spring 的事务传播机制？
+事务的传播机制定义了在方法被另一个事务方法调用时，这个方法的事务行为应该如何。
+
+Spring 提供了一系列事务传播行为，这些传播行为定义了事务的边界和事务上下文如何在方法调用链中传播。
+
+REQUIRED：如果当前存在事务，则加入该事务；如果当前没有事务，则创建一个新的事务。Spring 的默认传播行为。   
+SUPPORTS：如果当前存在事务，则加入该事务；如果当前没有事务，则以非事务方式执行。   
+MANDATORY：如果当前存在事务，则加入该事务；如果当前没有事务，则抛出异常。  
+REQUIRES_NEW：总是启动一个新的事务，如果当前存在事务，则将当前事务挂起。  
+NOT_SUPPORTED：总是以非事务方式执行，如果当前存在事务，则将当前事务挂起。   
+NESTED：如果当前存在事务，则在嵌套事务内执行。如果当前事务不存在，则行为与 REQUIRED 一样。嵌套事务是一个子事务，它依赖于父事务。父事务失败时，会回滚子事务所做的所有操作。但子事务异常不一定会导致父事务的回滚。
+
+事务传播机制是使用 ThreadLocal 实现的，所以，如果调用的方法是在新线程中，事务传播会失效。
+
+### protected 和 private 加事务会生效吗
+在 Spring 中，只有通过 Spring 容器的 AOP 代理调用的公开方法（public method）上的@Transactional注解才会生效。
+
+如果在 protected、private 方法上使用@Transactional，这些事务注解将不会生效，原因：Spring 默认使用基于 JDK 的动态代理（当接口存在时）或基于 CGLIB 的代理（当只有类时）来实现事务。这两种代理机制都只能代理公开的方法。
+
+
+## 声明式事务实现原理了解吗？
+Spring 的声明式事务管理是通过 AOP（面向切面编程）和代理机制实现的。
+
+1. 在 Bean 初始化阶段创建代理对象：
+
+Spring 容器在初始化单例 Bean 的时候，会遍历所有的 BeanPostProcessor 实现类，并执行其 postProcessAfterInitialization 方法。
+
+在执行 postProcessAfterInitialization 方法时会遍历容器中所有的切面，查找与当前 Bean 匹配的切面，这里会获取事务的属性切面，也就是 @Transactional 注解及其属性值。
+
+然后根据得到的切面创建一个代理对象，默认使用 JDK 动态代理创建代理，如果目标类是接口，则使用 JDK 动态代理，否则使用 Cglib。
+
+2. 在执行目标方法时进行事务增强操作：
+
+当通过代理对象调用 Bean 方法的时候，会触发对应的 AOP 增强拦截器，声明式事务是一种环绕增强，对应接口为MethodInterceptor，事务增强对该接口的实现为TransactionInterceptor
+
+事务拦截器TransactionInterceptor在invoke方法中，通过调用父类TransactionAspectSupport的invokeWithinTransaction方法进行事务处理，包括开启事务、事务提交、异常回滚等。
+
+## 声明式事务在哪些情况下会失效？
+1. @Transactional 应用在非 public 修饰的方法上
+2. @Transactional 注解属性 propagation 设置错误
+3. @Transactional 注解属性 rollbackFor 设置错误
+4. 同一个类中方法调用，导致@Transactional 失效
+
+
+
+## Spring MVC 的核心组件？
+1. DispatcherServlet：前置控制器，是整个流程控制的核心，控制其他组件的执行，进行统一调度，降低组件之间的耦合性，相当于总指挥。
+2. Handler：处理器，完成具体的业务逻辑，相当于 Servlet 或 Action。
+3. HandlerMapping：DispatcherServlet 接收到请求之后，通过 HandlerMapping 将不同的请求映射到不同的 Handler。
+4. HandlerInterceptor：处理器拦截器，是一个接口，如果需要完成一些拦截处理，可以实现该接口。
+5. HandlerExecutionChain：处理器执行链，包括两部分内容：Handler 和 HandlerInterceptor（系统会有一个默认的 HandlerInterceptor，如果需要额外设置拦截，可以添加拦截器）。
+6. HandlerAdapter：处理器适配器，Handler 执行业务方法之前，需要进行一系列的操作，包括表单数据的验证、数据类型的转换、将表单数据封装到 JavaBean 等，这些操作都是由 HandlerApater 来完成，开发者只需将注意力集中业务逻辑的处理上，DispatcherServlet 通过 HandlerAdapter 执行不同的 Handler。
+7. ModelAndView：装载了模型数据和视图信息，作为 Handler 的处理结果，返回给 DispatcherServlet。
+8. ViewResolver：视图解析器，DispatcheServlet 通过它将逻辑视图解析为物理视图，最终将渲染结果响应给客户端。
+
+## Spring MVC 的工作流程？
+Spring MVC 是基于模型-视图-控制器的 Web 框架，它的工作流程也主要是围绕着 Model、View、Controller 这三个组件展开的。
+
+![](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/sidebar/sanfene/spring-e29a122b-db07-48b8-8289-7251032e87a1.png)
+
+①、发起请求：客户端通过 HTTP 协议向服务器发起请求。
+
+②、前端控制器：这个请求会先到前端控制器 DispatcherServlet，它是整个流程的入口点，负责接收请求并将其分发给相应的处理器。
+
+③、处理器映射：DispatcherServlet 调用 HandlerMapping 来确定哪个 Controller 应该处理这个请求。通常会根据请求的 URL 来确定。
+
+④、处理器适配器：一旦找到目标 Controller，DispatcherServlet 会使用 HandlerAdapter 来调用 Controller 的处理方法。
+
+⑤、执行处理器：Controller 处理请求，处理完后返回一个 ModelAndView 对象，其中包含模型数据和逻辑视图名。
+
+⑥、视图解析器：DispatcherServlet 接收到 ModelAndView 后，会使用 ViewResolver 来解析视图名称，找到具体的视图页面。
+
+⑦、渲染视图：视图使用模型数据渲染页面，生成最终的页面内容。
+
+⑧、响应结果：DispatcherServlet 将视图结果返回给客户端。
+
+Spring MVC 虽然整体流程复杂，但是实际开发中很简单，大部分的组件不需要我们开发人员创建和管理，真正需要处理的只有 Controller 、View 、Model。
+
+在前后端分离的情况下，步骤 ⑥、⑦、⑧ 会略有不同，后端通常只需要处理数据，并将 JSON 格式的数据返回给前端就可以了，而不是返回完整的视图页面。
+
+## 这个 Handler 是什么东西啊？为什么还需要 HandlerAdapter
+Handler 一般就是指 Controller，Controller 是 Spring MVC 的核心组件，负责处理请求，返回响应。
+
+Spring MVC 允许使用多种类型的处理器。不仅仅是标准的@Controller注解的类，还可以是实现了特定接口的其他类（如 HttpRequestHandler 或 SimpleControllerHandlerAdapter 等）。这些处理器可能有不同的方法签名和交互方式。
+
+HandlerAdapter 的主要职责就是调用 Handler 的方法来处理请求，并且适配不同类型的处理器。HandlerAdapter 确保 DispatcherServlet 可以以统一的方式调用不同类型的处理器，无需关心具体的执行细节。
+
+## SpringMVC Restful 风格的接口的流程是什么样的呢？
+我们都知道 Restful 接口，响应格式是 json，这就用到了一个常用注解：@ResponseBody
+```java
+@GetMapping("/user")
+@ResponseBody
+public User user(){
+    return new User(1,"张三");
+}
+```
+加入了这个注解后，整体的流程上和使用 ModelAndView 大体上相同，但是细节上有一些不同
+
+![](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/sidebar/sanfene/spring-2da963a0-5da9-4b3a-aafd-fd8dbc7e1807.png)
+
+1. 客户端向服务端发送一次请求，这个请求会先到前端控制器 DispatcherServlet
+
+2. DispatcherServlet 接收到请求后会调用 HandlerMapping 处理器映射器。由此得知，该请求该由哪个 Controller 来处理
+
+3. DispatcherServlet 调用 HandlerAdapter 处理器适配器，告诉处理器适配器应该要去执行哪个 Controller
+
+4. Controller 被封装成了 ServletInvocableHandlerMethod，HandlerAdapter 处理器适配器去执行 invokeAndHandle 方法，完成对 Controller 的请求处理
+
+5. HandlerAdapter 执行完对 Controller 的请求，会调用 HandlerMethodReturnValueHandler 去处理返回值，主要的过程：
+    - 调用 RequestResponseBodyMethodProcessor，创建 ServletServerHttpResponse（Spring 对原生 ServerHttpResponse 的封装）实例
+
+    - 使用 HttpMessageConverter 的 write 方法，将返回值写入 ServletServerHttpResponse 的 OutputStream 输出流中
+
+    - 在写入的过程中，会使用 JsonGenerator（默认使用 Jackson 框架）对返回值进行 Json 序列化
+
+6. 执行完请求后，返回的 ModealAndView 为 null，ServletServerHttpResponse 里也已经写入了响应，所以不用关心 View 的处理
+
 
