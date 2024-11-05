@@ -415,3 +415,54 @@ CacheLoader<String, String> cacheLoader = CacheLoader.asyncReloading(
 自动刷新的缺点是：当缓存项到了指定过期时间，不管是同步刷新还是异步刷新，绝大部分请求线程都会返回旧的数据值，缓存值会有一定的延迟效果
 
 ### 项目-腾讯SaaS平台   CompletableFuture底层实现原理
+#### Future实现原理回顾
+Java中的Future是一种异步编程的技术，它允许我们在另一个线程中执行任务，并在主线程中等待任务完成后获取结果。Future的实现原理可以通过Java中的两个接口来理解：Future和FutureTask。
+
+Future接口是Java中用于表示异步操作结果的一个接口，它定义了获取异步操作结果的方法get()，并且可以通过isDone()方法查询操作是否已经完成。
+
+在Java 5中引入了FutureTask类，它是一个实现了Future和Runnable接口的类，它可以将一个任务（Runnable或Callable）封装成一个异步操作，通过FutureTask的get()方法可以获取任务执行的结果。
+
+FutureTask的get()方法是一个阻塞方法，如果任务还没有完成，则会一直阻塞当前线程，直到任务完成。这个阻塞的过程可以通过一个volatile类型的变量来实现。在任务执行完成后，会调用done()方法通知FutureTask任务已经完成，并且设置执行结果。done()方法会调用FutureTask的回调函数，完成后将执行结果设置到FutureTask中。
+
+**FutureTask并不能保证任务的执行顺序和执行结果，因为任务的执行是由线程池来控制的。如果需要保证任务的执行顺序和结果，可以使用CompletionService和ExecutorCompletionService。**
+
+综上所述，Future的实现原理就是通过Future和FutureTask接口，将任务封装成一个异步操作，并在主线程中等待任务完成后获取执行结果。FutureTask是Future的一个具体实现，通过阻塞方法和回调函数来实现异步操作的结果获取。
+
+#### Future局限性分析与推荐
+- 阻塞问题：Future的get()方法是一个阻塞方法，如果任务没有完成，会一直阻塞当前线程，这会导致整个应用程序的响应性下降。
+- 无法取消任务：Future的cancel()方法可以用于取消任务的执行，但如果任务已经开始执行，则无法取消。此时只能等待任务执行完毕，这会导致一定的性能损失。
+- 缺少异常处理：Future的get()方法会抛出异常，但是如果任务执行过程中抛出异常，Future无法处理异常，只能将异常抛给调用者处理。
+- 缺少组合操作：Future只能处理单个异步操作，无法支持多个操作的组合，例如需要等待多个任务全部完成后再执行下一步操作。
+
+#### CompletableFuture核心原理简述
+CompletableFuture的核心原理是基于Java的Future接口和内部的状态机实现的。它可以通过三个步骤来实现异步操作：
+
+- 创建CompletableFuture对象：  
+    通过CompletableFuture的静态工厂方法，我们可以创建一个新的CompletableFuture对象，并指定该对象的异步操作。通常情况下，我们可以通过supplyAsync()或者runAsync()方法来创建CompletableFuture对象。
+- 异步操作的执行：  
+    在CompletableFuture对象创建之后，异步操作就开始执行了。这个异步操作可以是一个计算任务或者一个IO操作。CompletableFuture会在另一个线程中执行这个异步操作，这样主线程就不会被阻塞。
+- 对异步操作的处理：   
+    异步操作执行完成后，CompletableFuture会根据执行结果修改其内部的状态，并触发相应的回调函数。如果异步操作成功完成，则会触发CompletableFuture的完成回调函数；如果异步操作抛出异常，则会触发CompletableFuture的异常回调函数。
+
+CompletableFuture的优势在于它支持链式调用和组合操作。通过CompletableFuture的then系列方法，我们可以创建多个CompletableFuture对象，并将它们串联起来形成一个链式的操作流。在这个操作流中，每个CompletableFuture对象都可以依赖于之前的CompletableFuture对象，以实现更加复杂的异步操作。
+
+总的来说，CompletableFuture的原理是基于Java的Future接口和内部的状态机实现的，它可以以非阻塞的方式执行异步操作，并通过回调函数来处理异步操作完成后的结果。通过链式调用和组合操作，CompletableFuture可以方便地实现复杂的异步编程任务。
+
+在CompletableFuture中，回调是一种重要的机制，可以在异步任务完成时自动触发回调函数。
+
+CompletableFuture的回调机制可以分为两种类型：完成回调和异常回调。
+
+CompletableFuture的回调机制是通过Java的函数式编程实现的。在CompletableFuture中，回调函数是一个函数接口，例如CompletableFuture的thenAccept方法需要一个Consumer类型的回调函数作为参数。在异步任务完成后，CompletableFuture会自动调用回调函数并传递异步任务的结果。
+
+在实现上，CompletableFuture的回调机制主要依赖于Java的Future接口和CompletableFuture内部的状态机。当CompletableFuture被创建时，它的状态是未完成的。当异步任务完成后，CompletableFuture会修改内部的状态，将结果或异常保存在内部，然后触发相应的回调函数。
+
+当用户调用CompletableFuture的then系列方法时，CompletableFuture会返回一个新的CompletableFuture对象，表示一个新的异步任务。当原始的CompletableFuture完成时，它会自动触发新的CompletableFuture的回调函数。这种链式回调的设计可以方便地实现多个异步任务之间的依赖关系。
+
+总的来说，CompletableFuture的回调机制是通过Java的函数式编程和状态机实现的。通过灵活的回调函数设置和链式调用，CompletableFuture可以方便地实现异步编程。
+
+从CompletableFuture的使用方法可以看出，CompletableFuture主要是通过回调的方式实现异步编程，解决Future在使用过程中需要阻塞的问题。
+
+其结构与观察者模式类似，CompletableFuture是发布者，使用链表保存观察者Completion。
+
+CompletableFuture的postComplete方法是通知方法，用于在CompletableFuture完成时通知观察者，发送订阅的数据。
+Completion的tryFire方法用于处理CompletableFuture发布的结果。
