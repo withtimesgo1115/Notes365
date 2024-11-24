@@ -5,7 +5,7 @@
 在此之前，我们公司使用的是bazel提供的remote cache机制，在机房部署单个节点从而提供一个单机的remote cache地址。但是这种架构在可用性和性能上都无法满足越来越庞大的编译压力。于是，我们搭建了这套分布式编译服务。使得既可以使用到remote cache也可以使用到分布式节点来做编译，从而提高编译的并发，加速编译。
 
 ### 项目技术架构
-Bazel + Spring Boot + Redis
+Bazel + Spring Boot + Redis + MYSQL
 
 当前技术选型可以满足项目场景的需求，引入过多的模块会增加项目复杂度
 
@@ -19,6 +19,11 @@ Bazel + Spring Boot + Redis
 - ContentAddressableStorage   
 
 这些也被叫做action_digest，发给server，server安排对action_digest的执行。
+
+
+- ContentAddressableStorage
+- cache ActionResults by a key ActionCache
+- execute actions asynchronously with Execution
 
 
 ### 改进点
@@ -36,10 +41,14 @@ Bazel + Spring Boot + Redis
 由于我们使用了一部分弹性节点，所以reindex非常重要，不然redis中的记录可能不准确了。获取活跃workers，然后对于redis中的CAS记录取交集，进行一个更新，保证redis中的记录准确。
 
 #### cache清除逻辑
-当前用的是引用计数，cache命中率
-
-
-
+当前用的是引用计数
+满足特定的
 
 
 ### PVC Runner实现本地cache
+PVC runner是基于gitlab runner进行的一个优化，使用临时pvc的方式，去挂载固定资源池里的pv，临时pvc和pod一对一绑定，pod销毁，临时卷也就被销毁了。但是pvc所绑定的pv并不会被销毁，而是retain住，从而保证repo和bazel cache可以被持久化。
+
+repo包含了代码和lfs等文件，bazel cache主要是保存了bazel的构建依赖图，后续编译可以复用
+
+pv资源需要进行一个监听，每次pv状态变化的时候对released状态的pv改为available。每次使用前需要判断pv是否存储空间合法，如果存储超过阈值，需要先进行清理。
+
