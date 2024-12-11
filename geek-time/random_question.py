@@ -27,5 +27,5 @@ def extract_random_subheadings(file_path, count=10):
         print(f"An error occurred: {e}")
 
 # 使用示例
-markdown_file_path = 'redis.md'  # 替换为你的 Markdown 文件路径
+markdown_file_path = 'mysql.md'  # 替换为你的 Markdown 文件路径
 extract_random_subheadings(markdown_file_path, count=10)
