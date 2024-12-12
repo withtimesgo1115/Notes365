@@ -1,5 +1,6 @@
 import re
 import random
+import sys
 
 def extract_random_subheadings(file_path, count=10):
     try:
@@ -27,5 +28,5 @@ def extract_random_subheadings(file_path, count=10):
         print(f"An error occurred: {e}")
 
 # 使用示例
-markdown_file_path = 'mysql.md'  # 替换为你的 Markdown 文件路径
+markdown_file_path = sys.argv[1]  # 替换为你的 Markdown 文件路径
 extract_random_subheadings(markdown_file_path, count=10)
