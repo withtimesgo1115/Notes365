@@ -584,6 +584,109 @@ func main() {
 可以捕获异常，但是只能捕获一次，Go语言，可以使用多值返回来返回错误。不要用异常代替错误，更不要用来控制流程。在极个别的情况下，才使用Go中引入的Exception处理：defer, panic, recover Go中，对异常处理的原则是：多用error包，少用panic
 
 ## 如何优雅的实现一个 goroutine 池
+```go
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"sync"
+	"time"
+)
+
+// Task 任务类型
+type Task func() error
+
+// Pool Goroutine 池的定义
+type Pool struct {
+	tasks     chan Task  // 任务队列
+	wg        sync.WaitGroup
+	ctx       context.Context
+	cancel    context.CancelFunc
+	closeOnce sync.Once  // 确保池子只被关闭一次
+}
+
+// NewPool 创建一个新的 Goroutine 池
+// maxWorkers: 最大工作协程数量
+// queueSize: 任务队列大小
+func NewPool(maxWorkers, queueSize int) *Pool {
+	ctx, cancel := context.WithCancel(context.Background())
+	pool := &Pool{
+		tasks:  make(chan Task, queueSize),
+		ctx:    ctx,
+		cancel: cancel,
+	}
+	// 启动工作协程
+	for i := 0; i < maxWorkers; i++ {
+		pool.wg.Add(1)
+		go pool.worker()
+	}
+	return pool
+}
+
+// 提交任务到任务队列
+func (p *Pool) Submit(task Task) error {
+	select {
+	case <-p.ctx.Done():
+		return errors.New("pool is closed")
+	case p.tasks <- task:
+		return nil
+	}
+}
+
+// 工作协程处理任务
+func (p *Pool) worker() {
+	defer p.wg.Done()
+	for {
+		select {
+		case <-p.ctx.Done():
+			return
+		case task := <-p.tasks:
+			// 执行任务
+			if task != nil {
+				_ = task() // 处理错误可自定义
+			}
+		}
+	}
+}
+
+// 关闭 Goroutine 池
+func (p *Pool) Close() {
+	p.closeOnce.Do(func() {
+		// 关闭任务通道
+		p.cancel()
+		close(p.tasks)
+		// 等待所有工作协程退出
+		p.wg.Wait()
+	})
+}
+
+// 示例任务
+func exampleTask(id int) Task {
+	return func() error {
+		fmt.Printf("Executing task %d\n", id)
+		time.Sleep(time.Second) // 模拟任务耗时
+		return nil
+	}
+}
+
+func main() {
+	// 创建一个 Goroutine 池，最大 5 个工作协程，任务队列大小为 10
+	pool := NewPool(5, 10)
+
+	// 提交任务
+	for i := 0; i < 20; i++ {
+		if err := pool.Submit(exampleTask(i)); err != nil {
+			fmt.Printf("Failed to submit task %d: %v\n", i, err)
+		}
+	}
+
+	// 关闭 Goroutine 池
+	pool.Close()
+	fmt.Println("All tasks completed and pool closed.")
+}
+```
 
 ## go gc 是怎么实现的？
 Go 的 GC 回收有三次演进过程，Go V1.3 之前普通标记清除（mark and sweep）方法，整体过程需要启动 STW，效率极低。GoV1.5 三色标记法，堆空间启动写屏障，栈空间不启动，全部扫描之后，需要重新扫描一次栈(需要 STW)，效率普通。GoV1.8 三色标记法，混合写屏障机制：栈空间不启动（全部标记成黑色），堆空间启用写屏障，整个过程不要 STW，效率高。
