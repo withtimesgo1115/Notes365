@@ -528,7 +528,45 @@ mysql> select * from t where id=1;
 ```
 一般碰到这种情况的话，大概率是表 t 被锁住了。接下来分析原因的时候，一般都是首先执行一下 show processlist 命令，看看当前语句处于什么状态。
 
+#### 等 MDL 锁
+就是使用 show processlist 命令查看 Waiting for table metadata lock 的示意图。
 
+出现这个状态表示的是，现在有一个线程正在表 t 上请求或者持有 MDL 写锁，把 select 语句堵住了。
+
+lock table t1 write 就是通过加mdl写锁，来阻止其他线程访问的
+
+杀掉持有MDL写锁的线程
+
+#### 等 flush
+flush table：会关闭所有打开的表，同时对于所有数据库中的表都加一个读锁，直到显示地执行unlock tables，该操作常常用于数据备份的时候。也就是将所有的脏页都要刷新到磁盘，然后对所有的表加上了读锁
+
+```sql
+flush tables t with read lock;
+
+flush tables with read lock;
+```
+
+这两个 flush 语句，如果指定表 t 的话，代表的是只关闭表 t；如果没有指定具体的表名，则表示关闭 MySQL 里所有打开的表。
+
+#### 等行锁
+```sql
+mysql> select * from t where id=1 lock in share mode; 
+```
+S锁为只读锁，不允许写。如果此时之前有别的事务加了X锁，则读写均不被允许。
+
+断开连接，会自动回滚，也就释放了锁资源
+
+
+### 第二类：查询慢
+```sql
+select * from t where c=50000 limit 1;
+```
+
+由于字段 c 上没有索引，这个语句只能走 id 主键顺序扫描。线上一般都配置超过 1 秒才算慢查询。但你要记住：坏查询不一定是慢查询。我们这个例子里面只有 10 万行记录，数据量大起来的话，执行时间就线性涨上去了。
+
+带 lock in share mode 的 SQL 语句，是当前读，因此会直接读到 1000001 这个结果，所以速度很快；而 select * from t where id=1 这个语句，是一致性读，因此需要从 1000001 开始，依次执行 undo log，执行了 100 万次以后，才将 1 这个结果返回。
+
+## 幻读是什么，幻读有什么问题？
 
 
 
