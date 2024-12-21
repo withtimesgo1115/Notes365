@@ -560,5 +560,41 @@ main 函数的主要工作就是，定义并初始化一个自定义控制器（
 
 此外，在这个过程中，每经过 resyncPeriod 指定的时间，Informer 维护的本地缓存，都会使用最近一次 LIST 返回的结果强制更新一次，从而保证缓存的有效性。在 Kubernetes 中，这个缓存强制更新的操作就叫作：resync。
 
+## 基于角色的权限控制：RBAC
+Kubernetes 中所有的 API 对象，都保存在 Etcd 里。可是，对这些 API 对象的操作，却一定都是通过访问 kube-apiserver 实现的。其中一个非常重要的原因，就是你需要 APIServer 来帮助你做授权工作。
+
+而在 Kubernetes 项目中，负责完成授权（Authorization）工作的机制，就是 RBAC：基于角色的访问控制（Role-Based Access Control）。
+
+Role：角色，它其实是一组规则，定义了一组对 Kubernetes API 对象的操作权限。
+
+Subject：被作用者，既可以是“人”，也可以是“机器”，也可以是你在 Kubernetes 里定义的“用户”。
+
+RoleBinding：定义了“被作用者”和“角色”的绑定关系。
+
+对于非 Namespaced（Non-namespaced）对象（比如：Node），或者，某一个 Role 想要作用于所有的 Namespace 的时候，我们又该如何去做授权呢？这时候，我们就必须要使用 ClusterRole 和 ClusterRoleBinding 这两个组合了
+
+Role + RoleBinding + ServiceAccount 的权限分配方式是你要重点掌握的内容。
+
+## 聪明的微创新：Operator工作原理解读
+在 Kubernetes 生态中，还有一个相对更加灵活和编程友好的管理“有状态应用”的解决方案，它就是：Operator。
+
+Operator 的工作原理，实际上是利用了 Kubernetes 的自定义 API 资源（CRD），来描述我们想要部署的“有状态应用”；然后在自定义控制器里，根据自定义 API 对象的变化，来完成具体的部署和运维工作。
+
+首先，Etcd Operator 会创建一个“种子节点”；然后，Etcd Operator 会不断创建新的 Etcd 节点，然后将它们逐一加入到这个集群当中，直到集群的节点数等于 size。
+
+这就意味着，在生成不同角色的 Etcd Pod 时，Operator 需要能够区分种子节点与普通节点。
+
+跟所有的自定义控制器一样，Etcd Operator 的启动流程也是围绕着 Informer 展开的
+
+1. Etcd Operator 启动要做的第一件事（ c.initResource），是创建 EtcdCluster 对象所需要的 CRD
+2. Etcd Operator 会定义一个 EtcdCluster 对象的 Informer
+3. 协调这样两个快、慢任务的一个典型解决方法，就是引入一个工作队列。
+
+Etcd Operator 的特殊之处在于，它为每一个 EtcdCluster 对象，都启动了一个控制循环，“并发”地响应这些对象的变化。显然，这种做法不仅可以简化 Etcd Operator 的代码实现，还有助于提高它的响应速度。
+
+一个 Cluster 对象需要具体负责的，其实有两个工作。
+- 第一个工作只在该 Cluster 对象第一次被创建的时候才会执行。这个工作，就是我们前面提到过的 Bootstrap，即：创建一个单节点的种子集群。
+- Cluster 对象的第二个工作，则是启动该集群所对应的控制循环。
+
 
 
