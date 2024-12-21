@@ -607,7 +607,62 @@ binlog根据事务提交时序出来的结果和实际表里不一致。
 
 间隙锁是在可重复读隔离级别下才会生效的。所以，你如果把隔离级别设置为读提交的话，就没有间隙锁了。但同时，你要解决可能出现的数据和日志不一致问题，需要把 binlog 格式设置为 row。这，也是现在不少公司使用的配置组合。
 
-## 
+## MySQL是怎么保证数据不丢的？
+只要 redo log 和 binlog 保证持久化到磁盘，就能确保 MySQL 异常重启后，数据可以恢复。
+
+### binlog 的写入机制
+其实，binlog 的写入逻辑比较简单：事务执行过程中，先把日志写到 binlog cache，事务提交的时候，再把 binlog cache 写到 binlog 文件中。
+
+一个事务的 binlog 是不能被拆开的，因此不论这个事务多大，也要确保一次性写入。这就涉及到了 binlog cache 的保存问题。
+
+系统给 binlog cache 分配了一片内存，每个线程一个，参数 binlog_cache_size 用于控制单个线程内 binlog cache 所占内存的大小。如果超过了这个参数规定的大小，就要暂存到磁盘。事务提交的时候，执行器把 binlog cache 里的完整事务写入到 binlog 中，并清空 binlog cache。
+
+每个线程有自己 binlog cache，但是共用同一份 binlog 文件。write，是指把日志写入到文件系统的 page cache，并没有把数据持久化到磁盘，所以速度比较快。fsync，才是将数据持久化到磁盘的操作。一般情况下，我们认为 fsync 才占磁盘的 IOPS。
+
+write 和 fsync 的时机，是由参数 sync_binlog 控制的：sync_binlog=0 的时候，表示每次提交事务都只 write，不 fsync；sync_binlog=1 的时候，表示每次提交事务都会执行 fsync；sync_binlog=N(N>1) 的时候，表示每次提交事务都 write，但累积 N 个事务后才 fsync。因此，在出现 IO 瓶颈的场景里，将 sync_binlog 设置成一个比较大的值，可以提升性能
+
+### redo log 的写入机制
+事务在执行过程中，生成的 redo log 是要先写到 redo log buffer 的。
+
+如果事务执行期间 MySQL 发生异常重启，这部分redo log buffer中的日志就丢了。由于事务并没有提交，所以这时日志丢了也不会有损失。事务还没提交的时候，redo log buffer 中的部分日志有没有可能被持久化到磁盘呢？确实有风险。
+
+- 存在 redo log buffer 中，物理上是在 MySQL 进程内存中，就是图中的红色部分；
+- 写到磁盘 (write)，但是没有持久化（fsync)，物理上是在文件系统的 page cache 里面，也就是图中的黄色部分；
+- 持久化到磁盘，对应的是 hard disk，也就是图中的绿色部分。
+
+日志写到 redo log buffer 是很快的，wirte 到 page cache 也差不多，但是持久化到磁盘的速度就慢多了。
+
+为了控制 redo log 的写入策略，InnoDB 提供了 innodb_flush_log_at_trx_commit 参数，它有三种可能取值：设置为 0 的时候，表示每次事务提交时都只是把 redo log 留在 redo log buffer 中 ;设置为 1 的时候，表示每次事务提交时都将 redo log 直接持久化到磁盘；设置为 2 的时候，表示每次事务提交时都只是把 redo log 写到 page cache。
+
+InnoDB 有一个后台线程，每隔 1 秒，就会把 redo log buffer 中的日志，调用 write 写到文件系统的 page cache，然后调用 fsync 持久化到磁盘。
+
+实际上，除了后台线程每秒一次的轮询操作外，还有两种场景会让一个没有提交的事务的 redo log 写入到磁盘中。
+
+1. redo log buffer 占用的空间即将达到 innodb_log_buffer_size 一半的时候，后台线程会主动写盘。注意，由于这个事务并没有提交，所以这个写盘动作只是 write，而没有调用 fsync，也就是只留在了文件系统的 page cache。
+2. 并行的事务提交的时候，顺带将这个事务的 redo log buffer 持久化到磁盘.
+
+两阶段提交的时候说过，时序上 redo log 先 prepare， 再写 binlog，最后再把 redo log commit。如果把 innodb_flush_log_at_trx_commit 设置成 1，那么 redo log 在 prepare 阶段就要持久化一次，因为有一个崩溃恢复逻辑是要依赖于 prepare 的 redo log，再加上 binlog 来恢复的。
+
+也就是 binlog 写完，redo log 还没 commit 前发生 crash，那崩溃恢复的时候 MySQL 会怎么处理？我们先来看一下崩溃恢复时的判断规则。 如果 redo log 里面的事务是完整的，也就是已经有了 commit 标识，则直接提交； 如果 redo log 里面的事务只有完整的 prepare，则判断对应的事务 binlog 是否存在并完整：a. 如果是，则提交事务；b. 否则，回滚事务。
+
+redo log 状态改为commit的时候不会进行fsync，因为只要binlog 写磁盘成功，就算redo log 的状态还是prepare也没有关系会被认为事务已经执行成功，所以只需要write 到page cache就ok了，没必要再浪费io主动去进行一次fsync。
+
+MySQL 的“双 1”配置，指的就是 sync_binlog 和 innodb_flush_log_at_trx_commit 都设置成 1。也就是说，一个事务完整提交前，需要等待两次刷盘，一次是 redo log（prepare 阶段），一次是 binlog。
+
+### 组提交
+mysql当多个线程在提交完prepare，relog写入到redolog buffer中，此时redo log buffer中有多个线程的日志内容，并同步更新了日志逻辑序列号。第一个写完的线程带着lsn去刷写磁盘，写完后，别的线程发现自己的redolog日志已经写完了便直接返回了
+
+一次组提交里面，组员越多，节约磁盘 IOPS 的效果越好
+
+为了让一次 fsync 带的组员更多，MySQL 有一个很有趣的优化：拖时间
+
+交叉fsync, 使得更多的可以写入buffer或者cache。
+（1）写入 redo log buffer。 （2）写 binlog （3）relog buffer 执行 fsync。（这一步的多等待是因为有了第二步，可以多等一些事务写入redo log buffer，然后一起fsync） （4）binlog 执行 fsync。（这一步多等待是因为第三步，第三步的插入，延迟了这一步的执行，多等了其它线程写入binlog cache的时间。）
+
+
+redo log 和 binlog 都是顺序写，磁盘的顺序写比随机写速度要快；组提交机制，可以大幅度降低磁盘的 IOPS 消耗。
+
+
 
 
 
